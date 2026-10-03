@@ -64,13 +64,13 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 
 ## Install
 
-Pre-built installers are produced with `npm run tauri build` (see below).
+Installers for all platforms are built by GitHub Actions and attached to each [Release](../../releases). Locally they are produced with `npm run tauri build` (see below).
 
 | Platform | Artifact |
 |---|---|
-| macOS (Apple Silicon) | `.dmg` / `.app` |
+| macOS (Apple Silicon + Intel) | `.dmg` / `.app` |
 | Windows (x64) | NSIS `-setup.exe` |
-| Linux | build from source |
+| Linux | `.deb`, `.rpm`, `.AppImage` (from Releases) |
 
 Builds are currently **unsigned**: macOS Gatekeeper will say "unidentified developer" (right-click → Open) and Windows SmartScreen will warn (More info → Run anyway).
 
@@ -134,7 +134,7 @@ src-tauri/src/
 - [ ] Camera QR scanner
 - [ ] Signing from the Quick Text tool
 - [ ] Code signing and notarization for macOS and Windows
-- [ ] Linux and universal-macOS builds in CI
+- [x] Linux, Windows and macOS (arm64 + Intel) builds in CI
 - [ ] Key backup/restore wizard and revocation certificates
 - [ ] Localization (Italian first)
 
