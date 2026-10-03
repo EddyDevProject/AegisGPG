@@ -16,7 +16,7 @@
 
   // ---- search
   let query = $state("");
-  let source = $state<Source>("wkd");
+  let source = $state<Source>("keys_openpgp_org");
   let searching = $state(false);
   let results = $state<RemoteKey[] | null>(null);
   let importing = $state<string | null>(null);
@@ -113,8 +113,8 @@
         bind:value={query}
       />
       <select class={input} aria-label="Source" bind:value={source}>
-        <option value="wkd">Web Key Directory (email)</option>
         <option value="keys_openpgp_org">keys.openpgp.org</option>
+        <option value="wkd">Web Key Directory (email)</option>
         <option value="keyserver_ubuntu_com">keyserver.ubuntu.com</option>
       </select>
       <button class={btn.primary} disabled={searching || !query.trim()}>{searching ? "Searching…" : "Search"}</button>
