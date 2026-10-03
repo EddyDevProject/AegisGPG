@@ -5,7 +5,7 @@
   import FileDropzone from "../components/FileDropzone.svelte";
   import ProgressBar from "../components/ProgressBar.svelte";
   import RecipientSelect from "../components/RecipientSelect.svelte";
-  import { errorMessage, keyLabel, keyring, refreshKeys, toast, withPassphrase } from "../stores.svelte";
+  import { errorMessage, keyLabel, keyring, prefs, refreshKeys, setEncryptToSelf, toast, withPassphrase, withSelf } from "../stores.svelte";
   import { btn, card, input, label } from "../ui";
 
   let file = $state<string | null>(null);
@@ -49,7 +49,7 @@
           api.encryptFile({
             input_path: file!,
             output_path: target,
-            recipients: doEncrypt ? recipients : [],
+            recipients: doEncrypt ? withSelf(recipients, doSign ? signer : undefined) : [],
             sign_with: doSign ? signer : undefined,
             passphrase,
             armor,
@@ -82,7 +82,11 @@
 
     {#if doEncrypt}
       <div><span class={label}>Recipients</span><RecipientSelect bind:selected={recipients} /></div>
-    {/if}
+    <label class="flex items-center gap-2 text-sm">
+      <input type="checkbox" checked={prefs.encryptToSelf} onchange={(e) => setEncryptToSelf(e.currentTarget.checked)} />
+      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span>
+    </label>
+{/if}
 
     {#if doSign}
       <div>

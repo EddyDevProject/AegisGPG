@@ -3,7 +3,7 @@
   import { api } from "../api";
   import RecipientSelect from "../components/RecipientSelect.svelte";
   import SignatureBanner from "../components/SignatureBanner.svelte";
-  import { errorMessage, refreshKeys, toast, withPassphrase } from "../stores.svelte";
+  import { errorMessage, prefs, refreshKeys, setEncryptToSelf, toast, withPassphrase, withSelf } from "../stores.svelte";
   import { btn, input, label } from "../ui";
   import type { SignatureStatus } from "../types";
 
@@ -35,7 +35,7 @@
     signatures = null;
     try {
       if (mode === "encrypt") {
-        output = await api.encryptText(text, recipients);
+        output = await api.encryptText(text, withSelf(recipients));
       } else {
         const r = await withPassphrase(
           (passphrase) => api.decryptText(text, passphrase),
@@ -70,6 +70,10 @@
 
   {#if mode === "encrypt"}
     <div><span class={label}>Recipients</span><RecipientSelect bind:selected={recipients} /></div>
+    <label class="flex items-center gap-2 text-sm">
+      <input type="checkbox" checked={prefs.encryptToSelf} onchange={(e) => setEncryptToSelf(e.currentTarget.checked)} />
+      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span>
+    </label>
   {/if}
 
   <div>
