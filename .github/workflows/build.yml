@@ -9,11 +9,37 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Decides whether this run publishes a GitHub Release: on a v* tag push, or
+  # on a push to main whose version (tauri.conf.json) has no tag yet.
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.m.outputs.release }}
+      tag: ${{ steps.m.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: m
+        run: |
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          release=false
+          tag="v$version"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            release=true
+            tag="${GITHUB_REF#refs/tags/}"
+          elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
+            if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
+              release=true
+            fi
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.name }}
+    needs: meta
     strategy:
       fail-fast: false
       matrix:
@@ -75,30 +101,36 @@ jobs:
         working-directory: src-tauri
         run: cargo test --locked
 
-      # Tag push (v*): build and attach installers to a draft GitHub Release.
+      # New version: build and attach installers to a published GitHub Release
+      # (shown in the repo sidebar). The tag is created if it does not exist.
       - name: Build and publish release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: needs.meta.outputs.release == 'true'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update packages; required because the release config
+          # enables createUpdaterArtifacts (also uploads latest.json).
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: AegisGPG ${{ github.ref_name }}
+          tagName: ${{ needs.meta.outputs.tag }}
+          releaseName: AegisGPG ${{ needs.meta.outputs.tag }}
           releaseBody: |
             Unsigned builds: on macOS use right-click → Open, on Windows choose "More info → Run anyway".
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          includeUpdaterJson: true
+          args: ${{ matrix.args }} --config src-tauri/tauri.release.conf.json
 
-      # Everything else: build only, upload installers as workflow artifacts.
+      # Otherwise: build only, upload installers as workflow artifacts.
       - name: Build
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: needs.meta.outputs.release != 'true'
         uses: tauri-apps/tauri-action@v0
         with:
           args: ${{ matrix.args }}
 
       - name: Upload installers
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: needs.meta.outputs.release != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: aegisgpg-${{ matrix.os }}-${{ matrix.rust-targets || 'default' }}

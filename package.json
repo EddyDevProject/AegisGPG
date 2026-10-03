@@ -1,6 +1,7 @@
 {
   "name": "aegisgpg",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -13,6 +14,8 @@
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.1",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",
     "d3-zoom": "^3.0.0"

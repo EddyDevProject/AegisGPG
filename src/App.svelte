@@ -10,7 +10,8 @@
   import KeysView from "./lib/views/KeysView.svelte";
   import TeamsView from "./lib/views/TeamsView.svelte";
   import TextView from "./lib/views/TextView.svelte";
-  import { applyTheme, theme, toggleTheme } from "./lib/stores.svelte";
+  import { onMount } from "svelte";
+  import { applyTheme, checkForUpdates, installUpdate, theme, toggleTheme, updater } from "./lib/stores.svelte";
 
   type Tab = "keys" | "teams" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
 
@@ -27,6 +28,11 @@
   let active = $state<Tab>("keys");
 
   $effect(applyTheme);
+
+  // Silent check at startup (not in `tauri dev`, where there is nothing to update).
+  onMount(() => {
+    if (!import.meta.env.DEV) checkForUpdates();
+  });
 </script>
 
 <div class="flex h-full">
@@ -44,8 +50,30 @@
         <span aria-hidden="true" class="w-5 text-center">{tab.icon}</span>{tab.label}
       </button>
     {/each}
+    {#if updater.status === "available" || updater.status === "downloading" || updater.status === "ready"}
+      <div class="mt-auto rounded-md border border-accent/40 bg-accent/10 p-2 text-xs" role="status">
+        <div class="font-medium">Version {updater.version} available</div>
+        {#if updater.status === "available"}
+          <button class="mt-1.5 w-full rounded bg-accent px-2 py-1 text-white hover:brightness-110" onclick={installUpdate}>
+            Install and restart
+          </button>
+        {:else}
+          <div class="mt-1.5 h-1.5 overflow-hidden rounded bg-zinc-200 dark:bg-zinc-800">
+            <div class="h-full bg-accent transition-[width]" style="width: {updater.status === 'ready' ? 100 : updater.progress * 100}%"></div>
+          </div>
+          <div class="mt-1 text-zinc-500">{updater.status === "ready" ? "Restarting…" : "Downloading…"}</div>
+        {/if}
+      </div>
+    {/if}
     <button
-      class="mt-auto rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+      class="{updater.status === 'idle' || updater.status === 'checking' ? 'mt-auto ' : ''}rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900"
+      disabled={updater.status !== "idle"}
+      onclick={() => checkForUpdates(true)}
+    >
+      {updater.status === "checking" ? "Checking…" : "⟳ Check for updates"}
+    </button>
+    <button
+      class="rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
       onclick={toggleTheme}
     >
       {theme.mode === "dark" ? "☀ Light mode" : "☾ Dark mode"}

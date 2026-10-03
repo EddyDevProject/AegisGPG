@@ -2,6 +2,7 @@
 name = "aegisgpg"
 version = "0.1.0"
 description = "Modern cross-platform OpenPGP key manager and encryption utility"
+license = "GPL-3.0-or-later"
 edition = "2021"
 rust-version = "1.77"
 
@@ -32,6 +33,8 @@ sequoia-openpgp = { version = "1.21", default-features = false, features = [
   "allow-experimental-crypto",
   "allow-variable-time-crypto",
 ] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [profile.release]
 lto = true

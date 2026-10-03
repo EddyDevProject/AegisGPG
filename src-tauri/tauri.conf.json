@@ -35,5 +35,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY5Qzg4MDM3M0Q2NzRERDkKUldUWlRXYzlONERJK1MyV1J6SjRwdzhaYWhncE1ENDBUZVhnVWdhcXpnMFhLV25qRlZEV29HOU4K",
+      "endpoints": [
+        "https://github.com/EddyDevProject/AegisGPG/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

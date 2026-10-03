@@ -1,3 +1,5 @@
+import { relaunch } from "@tauri-apps/plugin-process";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { api } from "./api";
 import type { AppError, KeyInfo, Team, Trust } from "./types";
 
@@ -192,4 +194,56 @@ export function ownKey(preferred?: string): string | undefined {
 export function withSelf(recipients: string[], preferred?: string): string[] {
   const me = prefs.encryptToSelf ? ownKey(preferred) : undefined;
   return me && !recipients.includes(me) ? [...recipients, me] : recipients;
+}
+
+// ------------------------------------------------------------ updates ----
+type UpdateStatus = "idle" | "checking" | "available" | "downloading" | "ready";
+export const updater = $state({
+  status: "idle" as UpdateStatus,
+  version: "",
+  notes: "",
+  /** Download progress 0..1 (0 while the size is unknown) */
+  progress: 0,
+});
+let pending: Update | null = null;
+
+/** Looks for a newer release. `manual` also reports "up to date" and errors. */
+export async function checkForUpdates(manual = false) {
+  if (updater.status !== "idle") return;
+  updater.status = "checking";
+  try {
+    const update = await check();
+    if (update) {
+      pending = update;
+      Object.assign(updater, { status: "available", version: update.version, notes: update.body ?? "" });
+      return;
+    }
+    if (manual) toast("success", "AegisGPG is up to date");
+  } catch (e) {
+    if (manual) toast("error", `Update check failed: ${errorMessage(e)}`);
+  }
+  updater.status = "idle";
+}
+
+/** Downloads, verifies (signature) and installs the update, then restarts. */
+export async function installUpdate() {
+  if (!pending || updater.status !== "available") return;
+  updater.status = "downloading";
+  updater.progress = 0;
+  let total = 0;
+  let done = 0;
+  try {
+    await pending.downloadAndInstall((ev) => {
+      if (ev.event === "Started") total = ev.data.contentLength ?? 0;
+      else if (ev.event === "Progress") {
+        done += ev.data.chunkLength;
+        updater.progress = total ? Math.min(done / total, 1) : 0;
+      }
+    });
+    updater.status = "ready";
+    await relaunch();
+  } catch (e) {
+    toast("error", `Update failed: ${errorMessage(e)}`);
+    updater.status = "available";
+  }
 }
