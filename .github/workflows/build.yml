@@ -61,6 +61,12 @@ jobs:
           workspaces: src-tauri -> target
           key: ${{ matrix.name }}
 
+      # Ad-hoc signature ("-"): no certificate needed. Apple Silicon refuses to
+      # open completely unsigned downloaded apps ("is damaged").
+      - name: Ad-hoc sign macOS builds
+        if: runner.os == 'macOS'
+        run: echo "APPLE_SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+
       - run: npm ci
 
       - run: npm run check
