@@ -1,7 +1,7 @@
 <script lang="ts">
   import Modal from "./Modal.svelte";
   import { api } from "../api";
-  import { errorMessage, refreshKeys, toast } from "../stores.svelte";
+  import { askConfirm, errorMessage, refreshKeys, toast } from "../stores.svelte";
   import { btn, input, label } from "../ui";
   import type { Algorithm } from "../types";
 
@@ -21,6 +21,14 @@
 
   async function submit(e: Event) {
     e.preventDefault();
+    if (!passphrase) {
+      const ok = await askConfirm(
+        "Create key without a passphrase?",
+        "Without a passphrase your secret key is stored unprotected on disk: anyone who can read your files (another app, malware, a stolen backup) can use it to decrypt your messages and sign as you. A passphrase is strongly recommended.",
+        "Create without passphrase",
+      );
+      if (!ok) return;
+    }
     busy = true;
     try {
       const days = Number(validity);

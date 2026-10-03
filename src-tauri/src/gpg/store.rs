@@ -17,6 +17,31 @@ use sequoia_openpgp as openpgp;
 use super::wot::Trust;
 use super::{GpgError, Result};
 
+/// Atomically writes `bytes` to `path`. On Unix the temp file is created with
+/// mode 0600, so the content is never readable by other users, even briefly.
+pub fn write_private(path: &std::path::Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+    let tmp = path.with_extension("tmp");
+    let mut opts = fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut f = opts.open(&tmp)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // `mode` is ignored if a stale temp file already existed.
+        f.set_permissions(fs::Permissions::from_mode(0o600))?;
+    }
+    f.write_all(bytes)?;
+    f.sync_all()?;
+    drop(f);
+    fs::rename(tmp, path)
+}
+
 pub struct KeyStore {
     dir: PathBuf,
     /// Ownertrust per fingerprint, persisted in `trust.json`.
@@ -80,14 +105,7 @@ impl KeyStore {
         };
         let bytes = merged.as_tsk().armored().to_vec()?;
         let path = self.path_for(&fp)?;
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, bytes)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&tmp, fs::Permissions::from_mode(0o600))?;
-        }
-        fs::rename(tmp, path)?;
+        write_private(&path, &bytes)?;
         Ok(merged)
     }
 
@@ -128,9 +146,25 @@ impl KeyStore {
     fn persist_trust(&self, trust: &HashMap<String, Trust>) -> Result<()> {
         let bytes = serde_json::to_vec_pretty(trust).map_err(|e| GpgError::Other(e.to_string()))?;
         let path = self.dir.join("trust.json");
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, bytes)?;
-        fs::rename(tmp, path)?;
+        write_private(&path, &bytes)?;
         Ok(())
+    }
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::write_private;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn write_private_is_owner_only_and_overwrites() {
+        let dir = std::env::temp_dir().join(format!("aegis-priv-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("k.asc");
+        write_private(&path, b"one").unwrap();
+        write_private(&path, b"two").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"two");
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

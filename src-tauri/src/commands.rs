@@ -122,7 +122,12 @@ pub fn export_key_to_file(
     let pass = self::secret(passphrase);
     let cert = store.get(&fingerprint)?;
     let bytes = keys::export(&cert, secret, pass.as_ref().map(|p| p.as_str()))?;
-    fs::write(path, bytes)?;
+    if secret {
+        // Secret key backups must not be readable by other local users.
+        crate::gpg::store::write_private(Path::new(&path), &bytes)?;
+    } else {
+        fs::write(path, bytes)?;
+    }
     Ok(())
 }
 

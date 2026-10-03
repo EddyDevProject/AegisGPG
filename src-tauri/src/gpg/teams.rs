@@ -102,9 +102,7 @@ impl TeamStore {
 
     fn persist(&self, teams: &[Team]) -> Result<()> {
         let bytes = serde_json::to_vec_pretty(teams).map_err(|e| GpgError::Other(e.to_string()))?;
-        let tmp = self.path.with_extension("tmp");
-        fs::write(&tmp, bytes)?;
-        fs::rename(tmp, &self.path)?;
+        super::store::write_private(&self.path, &bytes)?;
         Ok(())
     }
 }
