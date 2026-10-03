@@ -138,6 +138,10 @@ src-tauri/src/
 - [ ] Key backup/restore wizard and revocation certificates
 - [ ] Localization (Italian first)
 
+## License
+
+AegisGPG is free software, released under the [GNU General Public License v3.0 or later](LICENSE). It builds on Sequoia-PGP (LGPL-2.0-or-later), Tauri (MIT/Apache-2.0) and other open-source components under their own licenses.
+
 ## Credits
 
 Made with ♥ by **Edoardo Bavaro**.
