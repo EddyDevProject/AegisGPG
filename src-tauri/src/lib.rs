@@ -27,6 +27,7 @@ pub fn run() {
             #[cfg(all(target_os = "macos", debug_assertions))]
             set_dev_dock_icon();
             let dir = app.path().app_data_dir()?.join("keyring");
+            app.manage(gpg::teams::TeamStore::open(dir.clone()));
             app.manage(gpg::store::KeyStore::open(dir)?);
             Ok(())
         })
@@ -54,6 +55,9 @@ pub fn run() {
             commands::qr_png,
             commands::save_qr,
             commands::import_from_uri,
+            commands::list_teams,
+            commands::save_team,
+            commands::delete_team,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AegisGPG");

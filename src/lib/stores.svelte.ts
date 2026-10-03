@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { AppError, KeyInfo, Trust } from "./types";
+import type { AppError, KeyInfo, Team, Trust } from "./types";
 
 // ------------------------------------------------------------- toasts ----
 export type ToastKind = "success" | "error" | "info";
@@ -36,6 +36,17 @@ export async function refreshKeys() {
     toast("error", errorMessage(e));
   } finally {
     keyring.loading = false;
+  }
+}
+
+// -------------------------------------------------------------- teams ----
+export const teamStore = $state({ list: [] as Team[] });
+
+export async function refreshTeams() {
+  try {
+    teamStore.list = await api.listTeams();
+  } catch (e) {
+    toast("error", errorMessage(e));
   }
 }
 
@@ -155,10 +166,30 @@ function pref(key: string, fallback: boolean): boolean {
   }
 }
 /** Avatars are fetched from third parties using a hash of the email. */
-export const prefs = $state({ avatars: pref("avatars", true) });
+export const prefs = $state({ avatars: pref("avatars", true), encryptToSelf: pref("encryptToSelf", true) });
 export function setAvatars(on: boolean) {
   prefs.avatars = on;
   try {
     localStorage.setItem("avatars", on ? "1" : "0");
   } catch {}
+}
+
+export function setEncryptToSelf(on: boolean) {
+  prefs.encryptToSelf = on;
+  try {
+    localStorage.setItem("encryptToSelf", on ? "1" : "0");
+  } catch {}
+}
+
+/** Own key to add as a recipient: `preferred` (the signer) if given, else the first valid secret key. */
+export function ownKey(preferred?: string): string | undefined {
+  const now = Date.now() / 1000;
+  const mine = keyring.list.filter((k) => k.has_secret && !k.revoked && (k.expires === null || k.expires > now));
+  return (mine.find((k) => k.fingerprint === preferred) ?? mine[0])?.fingerprint;
+}
+
+/** Recipients plus the user's own key when "encrypt to myself" is on. */
+export function withSelf(recipients: string[], preferred?: string): string[] {
+  const me = prefs.encryptToSelf ? ownKey(preferred) : undefined;
+  return me && !recipients.includes(me) ? [...recipients, me] : recipients;
 }

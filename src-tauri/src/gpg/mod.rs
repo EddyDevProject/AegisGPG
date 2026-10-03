@@ -7,6 +7,7 @@ pub mod keys;
 pub mod net;
 pub mod qr;
 pub mod store;
+pub mod teams;
 pub mod wot;
 
 pub use error::{GpgError, Result};

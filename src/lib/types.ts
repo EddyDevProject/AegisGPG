@@ -155,3 +155,10 @@ export interface QrView {
   ec: "L" | "M";
   bytes: number;
 }
+
+export interface Team {
+  id: string;
+  name: string;
+  /** Key fingerprints; may reference keys that were deleted since */
+  members: string[];
+}

@@ -18,6 +18,7 @@ import type {
   KeyInfo,
   Progress,
   TextDecryptResult,
+  Team,
 } from "./types";
 
 export const api = {
@@ -58,6 +59,10 @@ export const api = {
   saveQr: (fingerprint: string, mode: QrMode, path: string) =>
     invoke<void>("save_qr", { fingerprint, mode, path }),
   importFromUri: (uri: string, server: ServerId) => invoke<KeyInfo>("import_from_uri", { uri, server }),
+
+  listTeams: () => invoke<Team[]>("list_teams"),
+  saveTeam: (name: string, members: string[], id?: string) => invoke<Team>("save_team", { id, name, members }),
+  deleteTeam: (id: string) => invoke<void>("delete_team", { id }),
 
   decryptText: (armored: string, passphrase?: string) =>
     invoke<TextDecryptResult>("decrypt_text", { armored, passphrase }),

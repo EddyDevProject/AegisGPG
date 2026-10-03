@@ -15,6 +15,7 @@ use crate::gpg::keys::{self, GenerateKeyRequest, KeyInfo, SubkeyInfo};
 use crate::gpg::net::{self, Server, UploadReport};
 use crate::gpg::qr;
 use crate::gpg::store::KeyStore;
+use crate::gpg::teams::{Team, TeamStore};
 use crate::gpg::wot::{self, Graph, Trust};
 use crate::gpg::{GpgError, Result};
 
@@ -128,6 +129,28 @@ pub fn export_key_to_file(
 #[tauri::command]
 pub fn delete_key(store: State<'_, KeyStore>, fingerprint: String) -> Result<()> {
     store.delete(&fingerprint)
+}
+
+// ------------------------------------------------------------ teams ----
+
+#[tauri::command]
+pub fn list_teams(teams: State<'_, TeamStore>) -> Vec<Team> {
+    teams.list()
+}
+
+#[tauri::command]
+pub fn save_team(
+    teams: State<'_, TeamStore>,
+    id: Option<String>,
+    name: String,
+    members: Vec<String>,
+) -> Result<Team> {
+    teams.save(id, name, members)
+}
+
+#[tauri::command]
+pub fn delete_team(teams: State<'_, TeamStore>, id: String) -> Result<()> {
+    teams.delete(&id)
 }
 
 // ------------------------------------------------------ progress + paths ----

@@ -8,13 +8,15 @@
   import DiscoverView from "./lib/views/DiscoverView.svelte";
   import GraphView from "./lib/views/GraphView.svelte";
   import KeysView from "./lib/views/KeysView.svelte";
+  import TeamsView from "./lib/views/TeamsView.svelte";
   import TextView from "./lib/views/TextView.svelte";
   import { applyTheme, theme, toggleTheme } from "./lib/stores.svelte";
 
-  type Tab = "keys" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
+  type Tab = "keys" | "teams" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: "keys", label: "Keys", icon: "🔑" },
+    { id: "teams", label: "Teams", icon: "👥" },
     { id: "discover", label: "Discover & Sync", icon: "🌐" },
     { id: "graph", label: "Trust Graph", icon: "🕸" },
     { id: "encrypt", label: "Encrypt & Sign", icon: "🔒" },
@@ -58,6 +60,7 @@
     {#key active}
       <div in:fade={{ duration: 120 }}>
         {#if active === "keys"}<KeysView />
+        {:else if active === "teams"}<TeamsView />
         {:else if active === "discover"}<DiscoverView />
         {:else if active === "graph"}<GraphView />
         {:else if active === "encrypt"}<EncryptView />
