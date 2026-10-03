@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AegisGPG: OpenPGP, without the pain</title>
+  <meta name="description" content="A modern, minimal desktop app to manage OpenPGP keys, encrypt, sign and build your web of trust. No gpg binary required. Free and open source." />
+  <meta name="theme-color" content="#4338ca" />
+  <meta property="og:title" content="AegisGPG: OpenPGP, without the pain" />
+  <meta property="og:description" content="Manage keys, encrypt, sign and build your web of trust. Free, open source, no gpg binary required." />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://aegisgpg.app/" />
+  <meta property="og:url" content="https://aegisgpg.app/" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/theme.js"></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="/favicon.svg" alt="" />AegisGPG</a>
+      <nav aria-label="Main">
+        <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#security">Security</a>
+        <a href="#download">Download</a>
+        <a href="https://github.com/EddyDevProject/AegisGPG" rel="noopener">GitHub</a>
+        <button class="theme" id="theme" type="button" aria-label="Toggle dark mode">☾</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div class="wrap">
+        <img class="logo" src="/favicon.svg" alt="AegisGPG logo" width="88" height="88" />
+        <h1>OpenPGP, <span>without the pain.</span></h1>
+        <p class="lead">A modern, minimal desktop app to manage keys, encrypt, sign and build your web of trust. No <code>gpg</code> binary required.</p>
+        <div class="cta">
+          <a class="btn primary" id="cta" href="#download">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10m0 0l-4-4m4 4l4-4M4 17h12"/></svg>
+            <span id="cta-label">Download</span>
+          </a>
+          <a class="btn" href="https://github.com/EddyDevProject/AegisGPG" rel="noopener">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            View source
+          </a>
+        </div>
+        <p class="sub" id="cta-sub">macOS · Windows · Linux · free and open source (GPL-3.0)</p>
+        <div class="badges" aria-label="Built with">
+          <span class="badge">Tauri v2</span><span class="badge">Rust · Sequoia-PGP</span><span class="badge">Svelte 5</span><span class="badge">Tailwind v4</span>
+        </div>
+
+        <div class="shot" role="img" aria-label="AegisGPG key manager showing a list of keys with trust levels">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="body">
+            <div class="side" aria-hidden="true">
+              <div class="h"><img src="/favicon.svg" alt="" />AegisGPG</div>
+              <div class="t on">🔑 Keys</div>
+              <div class="t">👥 Teams</div>
+              <div class="t">🌐 Discover &amp; Sync</div>
+              <div class="t">🕸 Trust Graph</div>
+              <div class="t">🔒 Encrypt &amp; Sign</div>
+              <div class="t">🔓 Decrypt &amp; Verify</div>
+              <div class="t">✎ Quick Text</div>
+            </div>
+            <div class="main" aria-hidden="true">
+              <h3>Keys <b>Generate key</b></h3>
+              <div class="row"><span class="av c1">AR</span><div class="n">Alice Rossi &lt;alice@example.org&gt;<small>3F2A 91C4 7B0E D5A8</small></div><span class="tag ok">Ultimate</span></div>
+              <div class="row"><span class="av c2">BM</span><div class="n">Bruno Marchi &lt;bruno@example.com&gt;<small>A19C 55E2 04BD 7F31</small></div><span class="tag ok">Full</span></div>
+              <div class="row"><span class="av c3">CL</span><div class="n">Chiara Leone &lt;chiara@example.net&gt;<small>77D0 C3E9 18A2 B64F</small></div><span class="tag warn">Marginal</span></div>
+              <div class="row"><span class="av c4">DF</span><div class="n">Dario Fontana &lt;dario@example.io&gt;<small>E5B8 20AF 9C14 3D07</small></div><span class="tag mute">Unknown</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section id="features">
+      <div class="wrap">
+        <div class="eyebrow">Features</div>
+        <h2>Everything you actually do with OpenPGP</h2>
+        <p class="intro">GnuPG is powerful but hostile. AegisGPG puts the common tasks behind a clean, keyboard-friendly interface with dark mode, drag &amp; drop and clear error messages instead of cryptic exit codes.</p>
+        <div class="grid">
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="13" r="3.5"/><path d="M9.5 10.5L17 3m-3 3l2 2m-4 1l1.5 1.5"/></svg></div><h3>Key manager</h3><p>Generate Ed25519 or RSA 4096 keys, import from files or text, export public or secret keys, with optional passphrase and expiry.</p></article>
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg></div><h3>Encrypt and sign files</h3><p>Drop any file, pick recipients, sign with your key. Streaming I/O with a live progress bar, so multi-gigabyte files never freeze the app.</p></article>
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="2.5"/><circle cx="14" cy="8" r="2"/><path d="M2.5 16c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M12.5 12.3c2.5-.4 5 .7 5 3.7"/></svg></div><h3>Teams</h3><p>Group contacts into teams and encrypt a file for everyone at once. Your own key is added automatically so you can always reopen it.</p></article>
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="4" r="2"/><circle cx="4" cy="15" r="2"/><circle cx="16" cy="15" r="2"/><path d="M9 6l-4 7m6-7l4 7M6 15h8"/></svg></div><h3>Web of Trust</h3><p>An interactive trust graph, ownertrust, computed validity and a guided dialog to certify keys. Signatures are cryptographically verified.</p></article>
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2 2 3 4.5 3 7s-1 5-3 7c-2-2-3-4.5-3-7s1-5 3-7z"/></svg></div><h3>Discover and sync</h3><p>Find keys via keys.openpgp.org, Web Key Directory or keyserver.ubuntu.com. Publish yours, refresh contacts and catch revocations.</p></article>
+          <article class="card"><div class="ico"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="5" height="5"/><rect x="12" y="3" width="5" height="5"/><rect x="3" y="12" width="5" height="5"/><path d="M12 12h2v2m3-2v5h-5"/></svg></div><h3>QR sharing</h3><p>Share a fingerprint or a compact public key as a QR code, save it as PNG or SVG, and import from an <code>openpgp4fpr:</code> link.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="security" class="soft">
+      <div class="wrap two">
+        <div>
+          <div class="eyebrow">Security</div>
+          <h2>Built to be boring where it matters</h2>
+          <p class="intro">The cryptography runs in Rust on Sequoia-PGP with a pure-Rust backend, and speaks standard OpenPGP: your keys and files stay compatible with GnuPG, Thunderbird and Proton.</p>
+          <div class="note"><strong>Heads-up:</strong> AegisGPG has not been independently audited, and the pure-Rust crypto backend is flagged experimental by Sequoia. For high-stakes use, review the code and prefer a hardware token.</div>
+        </div>
+        <ul class="list">
+          <li><span><strong>Least privilege.</strong> The webview has no filesystem access; only files you pick or drop are opened, under a strict CSP.</span></li>
+          <li><span><strong>Secrets wiped from memory.</strong> Passphrases and key material live in zeroizing buffers.</span></li>
+          <li><span><strong>Untrusted downloads handled.</strong> Keys from servers are stripped of secret material, size-capped and HTTPS-only.</span></li>
+          <li><span><strong>Private by default.</strong> Keys and settings stay on your device with owner-only file permissions. Avatars can be switched off.</span></li>
+          <li><span><strong>Signed updates.</strong> Updates are verified against a public key built into the app before installing.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap">
+        <div class="eyebrow">Download</div>
+        <h2>Get AegisGPG</h2>
+        <p class="ver" id="ver">Latest release on GitHub.</p>
+        <div class="dl" id="dl">
+          <article class="card" data-os="mac"><h3>macOS</h3><p>Apple Silicon and Intel, <code>.dmg</code></p><div class="links"><a class="btn" data-asset="mac-arm" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">Apple Silicon</a><a class="btn" data-asset="mac-x64" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">Intel</a></div></article>
+          <article class="card" data-os="win"><h3>Windows</h3><p>Windows 10 and 11, x64 installer</p><div class="links"><a class="btn" data-asset="win" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">Installer (.exe)</a></div></article>
+          <article class="card" data-os="linux"><h3>Linux</h3><p>AppImage, <code>.deb</code> and <code>.rpm</code></p><div class="links"><a class="btn" data-asset="appimage" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">AppImage</a><a class="btn" data-asset="deb" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">.deb</a><a class="btn" data-asset="rpm" href="https://github.com/EddyDevProject/AegisGPG/releases/latest">.rpm</a></div></article>
+        </div>
+        <div class="note">
+          <strong>Unsigned builds.</strong> AegisGPG is not yet notarized or code-signed with a paid certificate, so your OS will warn you the first time.
+          On macOS open <em>System Settings → Privacy &amp; Security → Open Anyway</em>; if the app is reported as damaged, run <code>xattr -cr /Applications/AegisGPG.app</code>.
+          On Windows choose <em>More info → Run anyway</em>.
+          You can always <a href="https://github.com/EddyDevProject/AegisGPG#build-from-source" rel="noopener">build it from source</a>.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Made with <span class="heart" aria-label="love">♥</span> by Edoardo Bavaro</span>
+      <span>
+        <a href="https://github.com/EddyDevProject/AegisGPG" rel="noopener">Source code</a> ·
+        <a href="https://github.com/EddyDevProject/AegisGPG/releases" rel="noopener">Releases</a> ·
+        <a href="https://github.com/EddyDevProject/AegisGPG/blob/main/LICENSE" rel="noopener">GPL-3.0-or-later</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="/main.js"></script>
+</body>
+</html>

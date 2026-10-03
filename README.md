@@ -8,6 +8,8 @@
 A modern, minimal desktop app to manage keys, encrypt, sign and build your web of trust.
 No `gpg` binary required.
 
+**[aegisgpg.app](https://aegisgpg.app)** · [Download](https://github.com/EddyDevProject/AegisGPG/releases/latest)
+
 ![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?logo=tauri&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-sequoia--openpgp-DEA584?logo=rust&logoColor=white)
 ![Svelte](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)
