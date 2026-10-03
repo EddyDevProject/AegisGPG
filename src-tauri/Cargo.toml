@@ -1,0 +1,46 @@
+[package]
+name = "aegisgpg"
+version = "0.1.0"
+description = "Modern cross-platform OpenPGP key manager and encryption utility"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "aegisgpg_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+zeroize = { version = "1", features = ["derive"] }
+sha1 = "0.10"
+qrcode = { version = "0.14", default-features = false }
+image = { version = "0.25", default-features = false, features = ["png"] }
+# rustls: no system OpenSSL needed on any platform.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+
+# Pure-Rust crypto backend: no system Nettle/OpenSSL needed on any platform.
+sequoia-openpgp = { version = "1.21", default-features = false, features = [
+  "crypto-rust",
+  "allow-experimental-crypto",
+  "allow-variable-time-crypto",
+] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# Dock icon while running unbundled (`tauri dev`) on macOS.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["NSApplication", "NSResponder", "NSImage"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["NSData"] }

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c7ff5"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <!-- the aegis: a clean shield -->
+  <path d="M512 180 L792 268 V520 C792 694 674 806 512 864 C350 806 232 694 232 520 V268 Z"
+        fill="#fff" stroke="#fff" stroke-width="28" stroke-linejoin="round"/>
+  <!-- keyhole cut-out -->
+  <g fill="#4a41d1">
+    <circle cx="512" cy="468" r="70"/>
+    <path d="M476 520 H548 L580 676 H444 Z" stroke="#4a41d1" stroke-width="12" stroke-linejoin="round"/>
+  </g>
+</svg>
