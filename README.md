@@ -37,6 +37,7 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 ### Encrypt, sign, decrypt
 - Drag & drop any file; encrypt to one or many recipients and/or sign with your key
 - Binary (`.gpg`) or ASCII-armored (`.asc`) output
+- **Send by mail**: one click opens your default mail client (Apple Mail, Outlook, Thunderbird) with a new draft and the encrypted file attached (macOS; Windows via Simple MAPI; Linux via `xdg-email`)
 - **Streaming I/O** in a background thread: multi-gigabyte files don't load into RAM or freeze the UI, and you get a live progress bar
 - Decrypt with a result card showing where the file went and a signature verdict: **valid**, **invalid** or **unknown signer**
 - Quick text tool to encrypt/decrypt clipboard text without touching the disk
