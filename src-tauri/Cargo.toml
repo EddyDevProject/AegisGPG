@@ -1,6 +1,6 @@
 [package]
 name = "aegisgpg"
-version = "0.1.0"
+version = "0.2.0"
 description = "Modern cross-platform OpenPGP key manager and encryption utility"
 license = "GPL-3.0-or-later"
 edition = "2021"

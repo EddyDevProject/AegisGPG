@@ -35,6 +35,25 @@
     if (doSign && !signer && secretKeys.length) signer = secretKeys[0].fingerprint;
   });
 
+  async function sendByMail() {
+    if (!outputPath) return;
+    const name = outputPath.split(/[\\/]/).pop();
+    const to = recipients
+      .map((fp) => keyring.list.find((k) => k.fingerprint === fp)?.email)
+      .filter((e): e is string => !!e)
+      .join(", ");
+    try {
+      await api.sendByMail(
+        outputPath,
+        to || undefined,
+        `Encrypted file: ${name}`,
+        `Hi,\n\nattached is the encrypted file "${name}" (OpenPGP). Open it with AegisGPG or any OpenPGP-compatible tool.\n`,
+      );
+    } catch (e) {
+      toast("error", errorMessage(e));
+    }
+  }
+
   async function run() {
     if (!file) return;
     const suggested = `${file}.${armor ? "asc" : "gpg"}`;
@@ -110,6 +129,7 @@
   {#if outputPath}
     <div class="rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
       Saved to <span class="font-mono text-xs break-all">{outputPath}</span>
+      <div class="mt-2"><button class={btn.outline} onclick={sendByMail}>Send by mail</button></div>
     </div>
   {/if}
 

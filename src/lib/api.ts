@@ -33,6 +33,8 @@ export const api = {
   deleteKey: (fingerprint: string) => invoke<void>("delete_key", { fingerprint }),
 
   encryptFile: (request: EncryptRequest) => invoke<string>("encrypt_file", { request }),
+  sendByMail: (attachmentPath: string, to?: string, subject?: string, body?: string) =>
+    invoke<void>("send_via_default_mail_client", { attachmentPath, to, subject, body }),
   decryptFile: (request: DecryptRequest) => invoke<DecryptResult>("decrypt_file", { request }),
   encryptText: (text: string, recipients: string[], signWith?: string, passphrase?: string) =>
     invoke<string>("encrypt_text", { text, recipients, signWith, passphrase }),

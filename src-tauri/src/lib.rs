@@ -1,4 +1,5 @@
 mod commands;
+mod email;
 mod gpg;
 
 use tauri::Manager;
@@ -60,6 +61,7 @@ pub fn run() {
             commands::list_teams,
             commands::save_team,
             commands::delete_team,
+            email::send_via_default_mail_client,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AegisGPG");
