@@ -4,6 +4,7 @@
   import Toasts from "./lib/components/Toasts.svelte";
   import DecryptView from "./lib/views/DecryptView.svelte";
   import EncryptView from "./lib/views/EncryptView.svelte";
+  import Icon, { type IconName } from "./lib/components/Icon.svelte";
   import ContactDrawer from "./lib/components/ContactDrawer.svelte";
   import DiscoverView from "./lib/views/DiscoverView.svelte";
   import GraphView from "./lib/views/GraphView.svelte";
@@ -15,14 +16,14 @@
 
   type Tab = "keys" | "teams" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "keys", label: "Keys", icon: "🔑" },
-    { id: "teams", label: "Teams", icon: "👥" },
-    { id: "discover", label: "Discover & Sync", icon: "🌐" },
-    { id: "graph", label: "Trust Graph", icon: "🕸" },
-    { id: "encrypt", label: "Encrypt & Sign", icon: "🔒" },
-    { id: "decrypt", label: "Decrypt & Verify", icon: "🔓" },
-    { id: "text", label: "Quick Text", icon: "✎" },
+  const tabs: { id: Tab; label: string; icon: IconName }[] = [
+    { id: "keys", label: "Keys", icon: "key" },
+    { id: "teams", label: "Teams", icon: "users" },
+    { id: "discover", label: "Discover & Sync", icon: "globe" },
+    { id: "graph", label: "Trust Graph", icon: "graph" },
+    { id: "encrypt", label: "Encrypt & Sign", icon: "lock" },
+    { id: "decrypt", label: "Decrypt & Verify", icon: "unlock" },
+    { id: "text", label: "Quick Text", icon: "text" },
   ];
 
   let active = $state<Tab>("keys");
@@ -47,7 +48,7 @@
         aria-current={active === tab.id ? "page" : undefined}
         onclick={() => (active = tab.id)}
       >
-        <span aria-hidden="true" class="w-5 text-center">{tab.icon}</span>{tab.label}
+        <Icon name={tab.icon} class="size-[18px]" />{tab.label}
       </button>
     {/each}
     {#if updater.status === "available" || updater.status === "downloading" || updater.status === "ready"}
@@ -66,17 +67,17 @@
       </div>
     {/if}
     <button
-      class="{updater.status === 'idle' || updater.status === 'checking' ? 'mt-auto ' : ''}rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900"
+      class="{updater.status === 'idle' || updater.status === 'checking' ? 'mt-auto ' : ''}flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900"
       disabled={updater.status !== "idle"}
       onclick={() => checkForUpdates(true)}
     >
-      {updater.status === "checking" ? "Checking…" : "⟳ Check for updates"}
+      <Icon name="refresh" class="size-[18px] {updater.status === 'checking' ? 'animate-spin' : ''}" />{updater.status === "checking" ? "Checking…" : "Check for updates"}
     </button>
     <button
-      class="rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+      class="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
       onclick={toggleTheme}
     >
-      {theme.mode === "dark" ? "☀ Light mode" : "☾ Dark mode"}
+      <Icon name={theme.mode === "dark" ? "sun" : "moon"} class="size-[18px]" />{theme.mode === "dark" ? "Light mode" : "Dark mode"}
     </button>
     <footer class="mt-2 px-2 pt-3 text-center text-xs text-zinc-500 border-t border-zinc-200 dark:border-zinc-800">
       Made with <span class="text-red-500" aria-label="love">♥</span> by Edoardo Bavaro
