@@ -3,99 +3,156 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AegisGPG: OpenPGP, without the pain</title>
-  <meta name="description" content="A free desktop app to manage OpenPGP keys, encrypt, sign and build your web of trust. No gpg binary, no terminal, open source." />
+  <title>AegisGPG: free OpenPGP app to encrypt files and manage keys</title>
+  <meta name="description" content="AegisGPG is a free, open-source desktop app for macOS, Windows and Linux. Encrypt and sign files, manage OpenPGP keys and build a web of trust. No gpg binary, no terminal." />
+  <meta name="author" content="Edoardo Bavaro" />
   <meta name="color-scheme" content="light dark" />
-  <meta name="theme-color" content="#f6f5fb" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#0f0e26" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#eceef3" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#12121f" media="(prefers-color-scheme: dark)" />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://aegisgpg.app/" />
+  <meta property="og:site_name" content="AegisGPG" />
+  <meta property="og:type" content="website" />
   <meta property="og:title" content="AegisGPG: OpenPGP, without the pain" />
   <meta property="og:description" content="Encrypt, sign and share keys from a simple desktop app. Free, open source, no gpg binary required." />
-  <meta property="og:type" content="website" />
   <meta property="og:url" content="https://aegisgpg.app/" />
   <meta property="og:image" content="https://aegisgpg.app/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="AegisGPG: OpenPGP, without the pain, on an indigo security tape." />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="canonical" href="https://aegisgpg.app/" />
+  <meta name="twitter:title" content="AegisGPG: OpenPGP, without the pain" />
+  <meta name="twitter:description" content="Free, open-source desktop app to encrypt, sign and manage OpenPGP keys." />
+  <meta name="twitter:image" content="https://aegisgpg.app/og.png" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="preload" href="/fonts/bsd.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/mono.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/archivo-var.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/style.css" />
   <script src="/theme.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://aegisgpg.app/#app",
+        "name": "AegisGPG",
+        "description": "Free, open-source desktop app to manage OpenPGP keys, encrypt, sign and decrypt files, and build a web of trust. No gpg binary required.",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "macOS, Windows, Linux",
+        "url": "https://aegisgpg.app/",
+        "downloadUrl": "https://github.com/EddyDevProject/AegisGPG/releases/latest",
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "isAccessibleForFree": true,
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "author": { "@id": "https://aegisgpg.app/#author" },
+        "codeRepository": "https://github.com/EddyDevProject/AegisGPG",
+        "image": "https://aegisgpg.app/og.png"
+      },
+      {
+        "@type": "Person",
+        "@id": "https://aegisgpg.app/#author",
+        "name": "Edoardo Bavaro",
+        "sameAs": ["https://github.com/EddyDevProject"]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://aegisgpg.app/#site",
+        "url": "https://aegisgpg.app/",
+        "name": "AegisGPG",
+        "inLanguage": "en"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "Do I need GnuPG installed?", "acceptedAnswer": { "@type": "Answer", "text": "No. AegisGPG runs the cryptography itself, in Rust, on the Sequoia-PGP library. There is nothing to install besides the app." } },
+          { "@type": "Question", "name": "Are my keys and files compatible with GnuPG, Thunderbird and Proton?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. AegisGPG speaks standard OpenPGP, so keys and encrypted files work with GnuPG, Thunderbird, Proton and other OpenPGP tools." } },
+          { "@type": "Question", "name": "Has AegisGPG been audited?", "acceptedAnswer": { "@type": "Answer", "text": "No. It has not been independently audited, and Sequoia flags its pure-Rust crypto backend as experimental. For high-stakes use, read the code and prefer a hardware token." } },
+          { "@type": "Question", "name": "Why does my system warn me when I open it?", "acceptedAnswer": { "@type": "Answer", "text": "The builds are not code-signed yet. On macOS choose Open Anyway in Privacy & Security; on Windows choose More info, then Run anyway." } },
+          { "@type": "Question", "name": "Where are my keys stored?", "acceptedAnswer": { "@type": "Answer", "text": "On your device only, in the app data folder, with owner-only file permissions. Secret keys are only protected if you set a passphrase." } },
+          { "@type": "Question", "name": "Is AegisGPG free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. It is free and open source under the GPL-3.0-or-later license." } }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="nav" id="nav">
     <div class="wrap nav-in">
-      <a class="brand" href="#top" aria-label="AegisGPG home"><img src="/favicon.svg" alt="" width="30" height="30" />AegisGPG</a>
+      <a class="brand" href="/" aria-label="AegisGPG home"><img src="/favicon.svg" alt="" width="28" height="28" />AegisGPG</a>
       <nav class="nav-links" aria-label="Main">
-        <a href="#how">How it works</a>
-        <a href="#features">Features</a>
-        <a href="#security">Security</a>
+        <a href="#process">Process</a>
+        <a href="#inventory">Inventory</a>
+        <a href="#inspection">Security</a>
+        <a href="#faq">FAQ</a>
       </nav>
       <div class="nav-end">
-        <a class="icon-btn" href="https://github.com/EddyDevProject/AegisGPG" rel="noopener" aria-label="View source"><svg class="ic"><use href="/icons.svg#i-github-logo" /></svg></a>
-        <button class="icon-btn" id="theme" type="button" aria-label="Switch to dark mode"><svg class="ic ic-moon"><use href="/icons.svg#i-moon" /></svg><svg class="ic ic-sun"><use href="/icons.svg#i-sun" /></svg></button>
-        <a class="btn btn-sm primary" href="#download" data-dl-nav>Download</a>
+        <a class="icon-btn" href="https://github.com/EddyDevProject/AegisGPG" rel="noopener" aria-label="View source on GitHub"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-github-logo" /></svg></a>
+        <button class="icon-btn" id="theme" type="button" aria-label="Switch to dark mode"><svg class="ic ic-moon" aria-hidden="true"><use href="/icons.svg#i-moon" /></svg><svg class="ic ic-sun" aria-hidden="true"><use href="/icons.svg#i-sun" /></svg></button>
+        <a class="btn btn-sm primary" href="#download">Download</a>
       </div>
     </div>
   </header>
 
   <main id="main">
-    <!-- HERO -->
-    <section class="hero" id="top">
+    <section class="hero" aria-labelledby="h1">
       <div class="wrap hero-grid">
-        <div class="hero-copy stagger">
-          <h1><span class="h1-a">OpenPGP,</span> <span class="h1-b">without the pain.</span></h1>
+        <div class="hero-copy rise">
+          <p class="eyebrow mono">Case file 001 / Free OpenPGP app</p>
+          <h1 id="h1"><span>OpenPGP,</span> <span>without</span> <span>the pain.</span></h1>
           <p class="lead">Encrypt, sign and share keys from a simple desktop app. No gpg binary, no terminal, no cryptic errors.</p>
           <div class="cta">
-            <a class="btn primary lg" id="cta" href="#download"><svg class="ic"><use href="/icons.svg#i-download-simple" /></svg><span id="cta-label">Download</span></a>
-            <a class="btn lg" href="https://github.com/EddyDevProject/AegisGPG" rel="noopener"><svg class="ic"><use href="/icons.svg#i-github-logo" /></svg>View source</a>
+            <a class="btn primary lg" id="cta" href="#download"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-download-simple" /></svg><span id="cta-label">Download</span></a>
+            <a class="btn lg" href="https://github.com/EddyDevProject/AegisGPG" rel="noopener"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-github-logo" /></svg>View source</a>
           </div>
+          <p class="fine mono">GPL-3.0 &middot; macOS, Windows, Linux &middot; <span id="ver-short">latest release</span></p>
         </div>
 
-        <div class="hero-art stagger-art">
-          <div class="envelope" id="env" data-state="open">
-            <div class="env-stripe">
-              <div class="env-face">
-                <div class="env-top">
-                  <dl class="route">
-                    <div><dt>From</dt><dd>Alice Rossi</dd></div>
-                    <div><dt>To</dt><dd>Bruno Marchi</dd></div>
-                  </dl>
-                  <div class="stamp-wrap" aria-hidden="true">
-                    <div class="stamp"><img src="/favicon.svg" alt="" width="64" height="64" /></div>
-                    <svg class="postmark" viewBox="0 0 120 120">
-                      <defs><path id="pm-arc" d="M60 60m-42 0a42 42 0 1 1 84 0a42 42 0 1 1 -84 0" /></defs>
-                      <circle cx="60" cy="60" r="55" fill="none" stroke="currentColor" stroke-width="2.5" />
-                      <circle cx="60" cy="60" r="33" fill="none" stroke="currentColor" stroke-width="1.5" />
-                      <text class="pm-text"><textPath href="#pm-arc" startOffset="0">AEGISGPG   SEALED   OPENPGP   </textPath></text>
-                      <path d="M30 60h60M32 52h56M32 68h56" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" />
-                    </svg>
-                  </div>
-                </div>
-
-                <div class="letter">
-                  <label class="sr-only" for="msg">Your message</label>
-                  <textarea id="msg" rows="4" maxlength="160" spellcheck="false">Meet at the harbour at nine. Bring the signed contract.</textarea>
-                  <pre id="sealed" class="armor" aria-live="off" hidden></pre>
-                </div>
-
-                <div class="env-foot">
-                  <button class="btn primary" id="seal" type="button"><svg class="ic"><use href="/icons.svg#i-lock-simple" /></svg><span>Seal message</span></button>
-                  <p class="state" id="state" role="status">Anyone can read this.</p>
+        <div class="rise rise-2">
+          <form class="bag" id="bag" data-state="open" aria-labelledby="bag-h">
+            <div class="tape" aria-hidden="true"><span class="tape-text" data-void="false"></span></div>
+            <div class="bag-body">
+              <div class="bag-head">
+                <h2 id="bag-h" class="label-t">Custody label</h2>
+                <p class="mono seal-no" id="seal-no">No. &mdash; &mdash; &mdash;</p>
+              </div>
+              <dl class="fields">
+                <div><dt>From</dt><dd>Alice Rossi</dd></div>
+                <div><dt>To</dt><dd>Bruno Marchi</dd></div>
+              </dl>
+              <div class="contents">
+                <label class="field-l" for="msg">Contents</label>
+                <div class="stack">
+                  <textarea id="msg" rows="4" maxlength="140" spellcheck="false">Meet at the harbour at nine. Bring the signed contract.</textarea>
+                  <pre id="cipher" class="mono" aria-hidden="true"></pre>
                 </div>
               </div>
+              <div class="actions">
+                <button class="hold" id="seal" type="button" aria-describedby="hint"><span class="hold-fill" aria-hidden="true"></span><span class="hold-l"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-lock-simple" /></svg><span id="seal-l">Hold to seal</span></span></button>
+                <div class="pair" id="pair" hidden>
+                  <button class="btn primary" id="open-ok" type="button"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-lock-key-open" /></svg>Open as Bruno</button>
+                  <button class="btn" id="open-no" type="button"><svg class="ic" aria-hidden="true"><use href="/icons.svg#i-eye-slash" /></svg>Open as anyone else</button>
+                </div>
+              </div>
+              <p class="status" id="status" role="status"><span class="dot" aria-hidden="true"></span><span id="status-t">Open. Anyone can read this.</span></p>
+              <p class="hint" id="hint">Press and hold, or press Enter. This is a demo: nothing is encrypted in your browser.</p>
+              <span class="stamp mono" id="stamp" aria-hidden="true">Sealed</span>
             </div>
-            <p class="demo-note">Try it. This demo only simulates the result, nothing is encrypted in your browser.</p>
-          </div>
+          </form>
         </div>
       </div>
     </section>
 
-    <!-- COMPATIBILITY -->
+    <div class="band" aria-hidden="true"><span class="tape-text tape-band"></span></div>
+
     <section class="compat" aria-labelledby="compat-h">
       <div class="wrap compat-in">
-        <h2 id="compat-h" class="compat-h">Speaks the OpenPGP you already use</h2>
-        <ul class="logos" aria-label="Compatible with">
+        <h2 id="compat-h" class="compat-h mono">Standard OpenPGP. Works with</h2>
+        <ul class="logos">
           <li><svg class="logo" role="img" aria-label="GnuPG"><use href="/icons.svg#b-gnupg" /></svg><span>GnuPG</span></li>
           <li><svg class="logo" role="img" aria-label="Thunderbird"><use href="/icons.svg#b-thunderbird" /></svg><span>Thunderbird</span></li>
           <li><svg class="logo" role="img" aria-label="Proton Mail"><use href="/icons.svg#b-proton" /></svg><span>Proton</span></li>
@@ -103,151 +160,128 @@
       </div>
     </section>
 
-    <!-- HOW -->
-    <section class="how" id="how">
+    <section class="process" id="process" aria-labelledby="process-h">
       <div class="wrap">
-        <h2 class="sec-h reveal">From file to inbox in three moves</h2>
-        <p class="sec-p reveal">GnuPG is powerful but hostile. AegisGPG puts the everyday tasks behind drag and drop, with plain-language messages when something goes wrong.</p>
+        <header class="sec-head reveal">
+          <p class="eyebrow mono">Chain of custody</p>
+          <h2 id="process-h">Three moves from file to inbox</h2>
+          <p class="sec-p">GnuPG is powerful but hostile. AegisGPG puts the everyday jobs behind drag and drop, and explains errors in plain words.</p>
+        </header>
 
-        <ol class="route-line">
-          <li class="stamp-card reveal">
-            <div class="perf">
-              <svg class="ic ic-xl"><use href="/icons.svg#i-file-arrow-down" /></svg>
+        <ol class="log">
+          <li class="log-row reveal">
+            <span class="log-n" aria-hidden="true">01</span>
+            <div class="log-main">
               <h3>Drop a file</h3>
-              <p>Drag anything in. Multi-gigabyte files stream in the background, so the app never freezes.</p>
+              <p>Drag anything in. Multi-gigabyte files stream in the background, so the app never freezes and you see real progress.</p>
             </div>
+            <p class="log-entry mono">00:00 FILE RECEIVED<br />tax-return.pdf</p>
           </li>
-          <li class="stamp-card reveal">
-            <div class="perf">
-              <svg class="ic ic-xl"><use href="/icons.svg#i-users-three" /></svg>
+          <li class="log-row reveal">
+            <span class="log-n" aria-hidden="true">02</span>
+            <div class="log-main">
               <h3>Choose who can open it</h3>
-              <p>Pick contacts or a whole team. Your own key is added too, so you can always reopen it.</p>
+              <p>Pick contacts or a whole team. Your own key is added too, so you can always reopen what you sent.</p>
             </div>
+            <p class="log-entry mono">00:04 RECIPIENTS SET<br />Bruno, Chiara, you</p>
           </li>
-          <li class="stamp-card reveal">
-            <div class="perf">
-              <svg class="ic ic-xl"><use href="/icons.svg#i-envelope-simple" /></svg>
+          <li class="log-row reveal">
+            <span class="log-n" aria-hidden="true">03</span>
+            <div class="log-main">
               <h3>Send by mail</h3>
               <p>One click opens your mail app with a new draft and the encrypted file already attached.</p>
             </div>
+            <p class="log-entry mono">00:06 SEALED, ATTACHED<br />tax-return.pdf.gpg</p>
           </li>
         </ol>
       </div>
     </section>
 
-    <!-- FEATURES -->
-    <section class="features" id="features">
-      <div class="wrap">
-        <h2 class="sec-h reveal">Everything else you need</h2>
-
-        <div class="bento">
-          <article class="tile t-encrypt reveal">
-            <h3>Encrypt and sign</h3>
-            <p>Pick recipients, sign with your key, choose binary or ASCII output. Decryption tells you if the signature is valid, invalid or from an unknown signer.</p>
-            <div class="flow" aria-hidden="true">
-              <span class="chip mono">tax-return.pdf</span>
-              <svg class="ic"><use href="/icons.svg#i-arrow-right" /></svg>
-              <span class="chip chip-on mono"><svg class="ic"><use href="/icons.svg#i-lock-simple" /></svg>tax-return.pdf.gpg</span>
-            </div>
-          </article>
-
-          <article class="tile t-trust reveal">
-            <h3>Web of Trust</h3>
-            <p>See who vouches for whom on an interactive graph. Signatures are verified, not just read.</p>
-            <svg class="graph" viewBox="0 0 320 250" role="img" aria-label="Trust graph: you certify Bruno and Chiara, who certify Dario and Elena">
-              <g class="edges">
-                <line x1="160" y1="125" x2="70" y2="55" class="e-full" />
-                <line x1="160" y1="125" x2="255" y2="60" class="e-full" />
-                <line x1="160" y1="125" x2="80" y2="200" class="e-marginal" />
-                <line x1="70" y1="55" x2="150" y2="22" class="e-full" />
-                <line x1="255" y1="60" x2="290" y2="140" class="e-marginal" />
-                <line x1="255" y1="60" x2="215" y2="14" class="e-full" />
-                <line x1="160" y1="125" x2="250" y2="205" class="e-unknown" />
-              </g>
-              <g class="nodes">
-                <circle cx="160" cy="125" r="22" class="n-you" /><text x="160" y="129" class="n-t n-you-t">You</text>
-                <circle cx="70" cy="55" r="15" class="n" /><text x="70" y="59" class="n-t">BM</text>
-                <circle cx="255" cy="60" r="15" class="n" /><text x="255" y="64" class="n-t">CL</text>
-                <circle cx="80" cy="200" r="15" class="n" /><text x="80" y="204" class="n-t">DF</text>
-                <circle cx="150" cy="22" r="11" class="n" /><text x="150" y="26" class="n-t n-s">EG</text>
-                <circle cx="215" cy="14" r="11" class="n" /><text x="215" y="18" class="n-t n-s">FM</text>
-                <circle cx="290" cy="140" r="12" class="n" /><text x="290" y="144" class="n-t n-s">GP</text>
-                <circle cx="250" cy="205" r="13" class="n n-dim" /><text x="250" y="209" class="n-t n-s">HV</text>
-              </g>
-            </svg>
-          </article>
-
-          <article class="tile t-mail reveal">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-envelope-simple" /></svg>
-            <h3>Send by mail</h3>
-            <p>Works with Apple Mail, Outlook and Thunderbird.</p>
-          </article>
-
-          <article class="tile t-teams reveal">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-users-three" /></svg>
-            <h3>Teams</h3>
-            <p>Group contacts and encrypt for everyone at once.</p>
-          </article>
-
-          <article class="tile t-keys reveal">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-key" /></svg>
-            <h3>Key manager</h3>
-            <p>Generate Ed25519 or RSA 4096 keys, import, export, set expiry.</p>
-          </article>
-
-          <article class="tile t-discover reveal">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-globe-hemisphere-east" /></svg>
-            <h3>Discover and sync</h3>
-            <p>Find keys on keys.openpgp.org, by Web Key Directory or on keyserver.ubuntu.com. Catch revocations early.</p>
-          </article>
-
-          <article class="tile t-qr reveal">
-            <div class="qr-tile">
-              <img src="/qr.svg" alt="QR code linking to the AegisGPG repository" width="116" height="116" />
-            </div>
-            <div>
-              <h3>QR sharing</h3>
-              <p>Share a fingerprint or a compact public key as a QR code.</p>
-            </div>
-          </article>
+    <section class="inventory" id="inventory" aria-labelledby="inv-h">
+      <div class="wrap inv-grid">
+        <div class="inv-main">
+          <header class="sec-head reveal">
+            <p class="eyebrow mono">Inventory</p>
+            <h2 id="inv-h">Everything in the bag</h2>
+          </header>
+          <ul class="manifest">
+            <li class="m-row reveal"><span class="m-id mono">K-01</span><h3>Key manager</h3><p>Generate Ed25519 or RSA 4096 keys, import, export, set an expiry and a passphrase.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">E-02</span><h3>Encrypt and sign</h3><p>Pick recipients, sign with your key, choose binary or ASCII-armored output.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">D-03</span><h3>Decrypt and verify</h3><p>See at once whether the signature is valid, invalid or from an unknown signer.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">M-04</span><h3>Send by mail</h3><p>Opens Apple Mail, Outlook or Thunderbird with the encrypted file attached.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">T-05</span><h3>Teams</h3><p>Group contacts and encrypt for everyone at once.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">F-06</span><h3>Find and sync keys</h3><p>Look up keys on keys.openpgp.org, by Web Key Directory or on keyserver.ubuntu.com. Catch revocations early.</p></li>
+            <li class="m-row reveal"><span class="m-id mono">Q-07</span><h3>QR sharing</h3><p>Share a fingerprint or a compact public key as a QR code.</p></li>
+          </ul>
         </div>
+
+        <figure class="chain reveal">
+          <svg class="graph" viewBox="0 0 320 270" role="img" aria-labelledby="graph-t graph-d">
+            <title id="graph-t">Web of trust graph</title>
+            <desc id="graph-d">You certify Bruno and Chiara, who certify Dario and Elena. Solid lines are fully trusted, dashed lines marginal or unknown.</desc>
+            <g class="edges">
+              <line x1="160" y1="135" x2="70" y2="65" class="e-full" />
+              <line x1="160" y1="135" x2="255" y2="70" class="e-full" />
+              <line x1="160" y1="135" x2="80" y2="220" class="e-marginal" />
+              <line x1="70" y1="65" x2="150" y2="28" class="e-full" />
+              <line x1="255" y1="70" x2="290" y2="150" class="e-marginal" />
+              <line x1="255" y1="70" x2="215" y2="22" class="e-full" />
+              <line x1="160" y1="135" x2="250" y2="225" class="e-unknown" />
+            </g>
+            <g class="nodes">
+              <circle cx="160" cy="135" r="24" class="n-you" /><text x="160" y="139" class="n-t n-you-t">You</text>
+              <circle cx="70" cy="65" r="16" class="n" /><text x="70" y="69" class="n-t">BM</text>
+              <circle cx="255" cy="70" r="16" class="n" /><text x="255" y="74" class="n-t">CL</text>
+              <circle cx="80" cy="220" r="16" class="n" /><text x="80" y="224" class="n-t">DF</text>
+              <circle cx="150" cy="28" r="12" class="n" /><text x="150" y="32" class="n-t n-s">EG</text>
+              <circle cx="215" cy="22" r="12" class="n" /><text x="215" y="26" class="n-t n-s">FM</text>
+              <circle cx="290" cy="150" r="13" class="n" /><text x="290" y="154" class="n-t n-s">GP</text>
+              <circle cx="250" cy="225" r="14" class="n n-dim" /><text x="250" y="229" class="n-t n-s">HV</text>
+            </g>
+          </svg>
+          <figcaption class="mono">W-08 Web of trust. Signatures are cryptographically verified, not just read.</figcaption>
+        </figure>
       </div>
     </section>
 
-    <!-- SECURITY -->
-    <section class="security" id="security">
+    <section class="inspect" id="inspection" aria-labelledby="inspect-h">
       <div class="wrap">
-        <h2 class="sec-h reveal">Private by design, honest about limits</h2>
-        <p class="sec-p reveal">The cryptography runs in Rust on Sequoia-PGP and speaks standard OpenPGP, so your keys and files stay compatible with the tools you already have.</p>
+        <header class="sec-head reveal">
+          <p class="eyebrow mono">Inspection report</p>
+          <h2 id="inspect-h">Private by design, honest about limits</h2>
+          <p class="sec-p">The cryptography runs in Rust on Sequoia-PGP and speaks standard OpenPGP, so your keys and files stay compatible with the tools you already have.</p>
+        </header>
 
-        <div class="sec-grid">
-          <ul class="sec-list">
-            <li class="reveal"><svg class="ic ic-lg"><use href="/icons.svg#i-shield-check" /></svg><div><h3>Least privilege</h3><p>The app window has no filesystem access. Only files you pick or drop are opened.</p></div></li>
-            <li class="reveal"><svg class="ic ic-lg"><use href="/icons.svg#i-fingerprint-simple" /></svg><div><h3>Secrets wiped from memory</h3><p>Passphrases and key material live in buffers that are zeroed when released.</p></div></li>
-            <li class="reveal"><svg class="ic ic-lg"><use href="/icons.svg#i-globe-hemisphere-east" /></svg><div><h3>Downloads treated as hostile</h3><p>Keys from servers lose any secret material, are size-capped and fetched over HTTPS only.</p></div></li>
-            <li class="reveal"><svg class="ic ic-lg"><use href="/icons.svg#i-eye-slash" /></svg><div><h3>Private by default</h3><p>Keys and settings stay on your device, with owner-only file permissions.</p></div></li>
-            <li class="reveal"><svg class="ic ic-lg"><use href="/icons.svg#i-signature" /></svg><div><h3>Signed updates</h3><p>Every update is verified against a public key built into the app.</p></div></li>
+        <div class="inspect-grid">
+          <ul class="checks">
+            <li class="reveal"><svg class="ic ic-lg" aria-hidden="true"><use href="/icons.svg#i-shield-check" /></svg><div><h3>Least privilege</h3><p>The app window has no filesystem access. Only files you pick or drop are opened.</p></div></li>
+            <li class="reveal"><svg class="ic ic-lg" aria-hidden="true"><use href="/icons.svg#i-fingerprint-simple" /></svg><div><h3>Secrets wiped from memory</h3><p>Passphrases and key material live in buffers that are zeroed when released.</p></div></li>
+            <li class="reveal"><svg class="ic ic-lg" aria-hidden="true"><use href="/icons.svg#i-globe-hemisphere-east" /></svg><div><h3>Downloads treated as hostile</h3><p>Keys from servers lose any secret material, are size-capped and fetched over HTTPS only.</p></div></li>
+            <li class="reveal"><svg class="ic ic-lg" aria-hidden="true"><use href="/icons.svg#i-eye-slash" /></svg><div><h3>Private by default</h3><p>Keys and settings stay on your device, with owner-only file permissions.</p></div></li>
+            <li class="reveal"><svg class="ic ic-lg" aria-hidden="true"><use href="/icons.svg#i-signature" /></svg><div><h3>Signed updates</h3><p>Every update is verified against a public key built into the app.</p></div></li>
           </ul>
 
           <aside class="slip reveal" aria-labelledby="slip-h">
-            <h3 id="slip-h">Declaration</h3>
+            <h3 id="slip-h" class="mono">Known limits</h3>
             <p>AegisGPG has not been independently audited, and Sequoia flags its pure-Rust crypto backend as experimental.</p>
             <p>For high-stakes use, read the code and prefer a hardware token.</p>
-            <a class="link" href="https://github.com/EddyDevProject/AegisGPG#security-model" rel="noopener">Read the security model <svg class="ic"><use href="/icons.svg#i-arrow-up-right" /></svg></a>
+            <a class="link" href="https://github.com/EddyDevProject/AegisGPG#security-model" rel="noopener">Read the security model <svg class="ic" aria-hidden="true"><use href="/icons.svg#i-arrow-up-right" /></svg></a>
           </aside>
         </div>
       </div>
     </section>
 
-    <!-- DOWNLOAD -->
-    <section class="download" id="download">
+    <section class="download" id="download" aria-labelledby="dl-h">
       <div class="wrap">
-        <h2 class="sec-h reveal">Get AegisGPG</h2>
-        <p class="sec-p reveal" id="ver">Free and open source under GPL-3.0. Latest release on GitHub.</p>
+        <header class="sec-head reveal">
+          <p class="eyebrow mono">Release</p>
+          <h2 id="dl-h">Get AegisGPG</h2>
+          <p class="sec-p" id="ver">Free and open source under GPL-3.0. Latest release on GitHub.</p>
+        </header>
 
-        <div class="os-grid" id="dl">
+        <div class="os-grid">
           <article class="os reveal" data-os="mac">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-apple-logo" /></svg>
+            <svg class="ic ic-xl" aria-hidden="true"><use href="/icons.svg#i-apple-logo" /></svg>
             <h3>macOS</h3>
             <p>Apple Silicon and Intel</p>
             <div class="links">
@@ -256,7 +290,7 @@
             </div>
           </article>
           <article class="os reveal" data-os="win">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-windows-logo" /></svg>
+            <svg class="ic ic-xl" aria-hidden="true"><use href="/icons.svg#i-windows-logo" /></svg>
             <h3>Windows</h3>
             <p>Windows 10 and 11, x64</p>
             <div class="links">
@@ -264,7 +298,7 @@
             </div>
           </article>
           <article class="os reveal" data-os="linux">
-            <svg class="ic ic-xl"><use href="/icons.svg#i-linux-logo" /></svg>
+            <svg class="ic ic-xl" aria-hidden="true"><use href="/icons.svg#i-linux-logo" /></svg>
             <h3>Linux</h3>
             <p>AppImage, deb and rpm</p>
             <div class="links">
@@ -275,22 +309,39 @@
           </article>
         </div>
 
-        <aside class="slip slip-wide reveal" aria-labelledby="unsigned-h">
+        <aside class="note reveal" aria-labelledby="unsigned-h">
           <h3 id="unsigned-h">Builds are not code-signed yet</h3>
           <p>Your system will warn you the first time you open AegisGPG. On macOS, open System Settings, Privacy &amp; Security, then choose Open Anyway. On Windows, choose More info, then Run anyway.</p>
           <p>If macOS says the app is damaged, run this in Terminal:</p>
           <div class="cmd">
             <code id="cmd-text">xattr -cr /Applications/AegisGPG.app</code>
-            <button class="copy" id="copy" type="button" aria-label="Copy command"><svg class="ic ic-copy"><use href="/icons.svg#i-copy" /></svg><svg class="ic ic-check"><use href="/icons.svg#i-check" /></svg></button>
+            <button class="copy" id="copy" type="button" aria-label="Copy command"><svg class="ic ic-copy" aria-hidden="true"><use href="/icons.svg#i-copy" /></svg><svg class="ic ic-check" aria-hidden="true"><use href="/icons.svg#i-check" /></svg></button>
           </div>
           <p>Prefer to check it yourself? <a class="link" href="https://github.com/EddyDevProject/AegisGPG#build-from-source" rel="noopener">Build it from source</a>.</p>
         </aside>
       </div>
     </section>
+
+    <section class="faq" id="faq" aria-labelledby="faq-h">
+      <div class="wrap faq-grid">
+        <header class="sec-head reveal">
+          <p class="eyebrow mono">Questions</p>
+          <h2 id="faq-h">Before you ask</h2>
+        </header>
+        <div class="qa">
+          <details class="reveal"><summary>Do I need GnuPG installed?</summary><p>No. AegisGPG runs the cryptography itself, in Rust, on the Sequoia-PGP library. There is nothing to install besides the app.</p></details>
+          <details class="reveal"><summary>Are my keys and files compatible with GnuPG, Thunderbird and Proton?</summary><p>Yes. AegisGPG speaks standard OpenPGP, so keys and encrypted files work with GnuPG, Thunderbird, Proton and other OpenPGP tools.</p></details>
+          <details class="reveal"><summary>Has it been audited?</summary><p>No. It has not been independently audited, and Sequoia flags its pure-Rust crypto backend as experimental. For high-stakes use, read the code and prefer a hardware token.</p></details>
+          <details class="reveal"><summary>Why does my system warn me when I open it?</summary><p>The builds are not code-signed yet. On macOS choose Open Anyway in Privacy &amp; Security; on Windows choose More info, then Run anyway.</p></details>
+          <details class="reveal"><summary>Where are my keys stored?</summary><p>On your device only, in the app data folder, with owner-only file permissions. Secret keys are only protected if you set a passphrase, and the app warns you if you skip it.</p></details>
+          <details class="reveal"><summary>Is it free?</summary><p>Yes. It is free and open source under the GPL-3.0-or-later license.</p></details>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
-    <div class="foot-stripe" aria-hidden="true"></div>
+    <div class="band band-foot" aria-hidden="true"><span class="tape-text tape-band"></span></div>
     <div class="wrap foot-in">
       <div class="foot-brand">
         <img src="/favicon.svg" alt="" width="40" height="40" />

@@ -20,17 +20,20 @@ themeBtn.addEventListener("click", () => {
 });
 paintTheme();
 
-// ---- nav border once the page has scrolled (observer, not a scroll listener)
+// ---- nav rule once the page has scrolled (observer, not a scroll listener)
 const nav = $("#nav");
 const sentinel = document.createElement("div");
-sentinel.setAttribute("aria-hidden", "true");
 sentinel.className = "sr-only";
+sentinel.setAttribute("aria-hidden", "true");
 document.body.prepend(sentinel);
 new IntersectionObserver(([e]) => nav.classList.toggle("scrolled", !e.isIntersecting)).observe(sentinel);
 
-// ---- reveal on scroll
-const revealables = $$(".reveal, .route-line");
+// ---- reveal on scroll, short stagger between siblings
+const revealables = $$(".reveal");
 if ("IntersectionObserver" in window && !reduceMotion.matches) {
+  $$(".manifest, .log, .checks, .os-grid, .qa").forEach((g) =>
+    $$(".reveal", g).forEach((el, i) => el.style.setProperty("--d", `${Math.min(i, 6) * 50}ms`))
+  );
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -39,25 +42,29 @@ if ("IntersectionObserver" in window && !reduceMotion.matches) {
         io.unobserve(e.target);
       }
     },
-    { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
-  );
-  // short stagger between siblings that enter together
-  $$(".sec-list, .bento, .os-grid, .route-line").forEach((group) =>
-    $$(".reveal", group).forEach((el, i) => el.style.setProperty("--d", `${Math.min(i, 6) * 55}ms`))
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.1 }
   );
   revealables.forEach((el) => io.observe(el));
 } else {
   revealables.forEach((el) => el.classList.add("in"));
 }
 
-// ---- the letter: seal and open (simulated, nothing is encrypted)
-const env = $("#env");
+// ---- the bag: hold to seal, then open as the recipient or as anyone else (simulated)
+const bag = $("#bag");
 const msg = $("#msg");
-const armor = $("#sealed");
+const cipher = $("#cipher");
 const sealBtn = $("#seal");
-const stateEl = $("#state");
+const sealLabel = $("#seal-l");
+const pair = $("#pair");
+const statusEl = $("#status-t");
+const sealNo = $("#seal-no");
+const stamp = $("#stamp");
+const hint = $("#hint");
+const tapeText = $(".tape-text", bag);
+const tape = $(".tape", bag);
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-const WIDTH = 46;
+const HOLD_MS = 900;
+const COLS = 28;
 
 function seeded(text) {
   let h = 2166136261;
@@ -66,20 +73,22 @@ function seeded(text) {
 }
 function armored(text) {
   const rnd = seeded(text || "empty");
-  const lines = ["-----BEGIN PGP MESSAGE-----", ""];
-  const rows = 5;
-  for (let r = 0; r < rows; r++) {
+  const rows = [];
+  for (let r = 0; r < 5; r++) {
     let s = "";
-    for (let i = 0; i < WIDTH; i++) s += B64[rnd() % 64];
-    lines.push(s);
+    for (let i = 0; i < COLS; i++) s += B64[rnd() % 64];
+    rows.push(s);
   }
-  return lines.join("\n");
+  return rows.join("\n");
+}
+function sealNumber(text) {
+  const rnd = seeded(text || "empty");
+  const g = () => (rnd() % 0x10000).toString(16).toUpperCase().padStart(4, "0");
+  return `No. ${g()} ${g()} ${g()}`;
 }
 function scramble(target, done) {
-  if (reduceMotion.matches) {
-    armor.textContent = target;
-    return done();
-  }
+  cipher.textContent = target;
+  if (reduceMotion.matches) return done();
   const start = performance.now();
   const dur = 520;
   const tick = (now) => {
@@ -89,40 +98,87 @@ function scramble(target, done) {
       const ch = target[i];
       out += ch === "\n" || i / target.length < t ? ch : B64[(Math.random() * 64) | 0];
     }
-    armor.textContent = out;
+    cipher.textContent = out;
     t < 1 ? requestAnimationFrame(tick) : done();
   };
   requestAnimationFrame(tick);
 }
-let busy = false;
-function setLabel(text, icon) {
-  $("span", sealBtn).textContent = text;
-  $("use", sealBtn).setAttribute("href", `/icons.svg#i-${icon}`);
+function showStamp(text, ok) {
+  stamp.textContent = text;
+  stamp.classList.toggle("ok", ok);
+  stamp.classList.remove("on");
+  void stamp.offsetWidth; // restart the transition
+  stamp.classList.add("on");
 }
+function setState(state, text) {
+  bag.dataset.state = state;
+  statusEl.textContent = text;
+}
+
+let busy = false;
 function seal() {
-  if (busy) return;
+  if (busy || bag.dataset.state !== "open") return;
   busy = true;
-  const target = armored(msg.value.trim());
-  armor.hidden = false;
-  armor.style.setProperty("min-height", `${msg.offsetHeight}px`);
-  msg.hidden = true;
-  scramble(target, () => {
-    env.dataset.state = "sealed";
-    stateEl.textContent = "Sealed for Bruno. Only Bruno can open it.";
-    setLabel("Open as Bruno", "lock-key-open");
+  const text = msg.value.trim();
+  scramble(armored(text), () => {
+    sealNo.textContent = sealNumber(text);
+    setState("sealed", "Sealed for Bruno. Only Bruno can open it.");
+    sealBtn.hidden = true;
+    pair.hidden = false;
+    hint.textContent = "Now try to open it, as Bruno and as anyone else.";
+    showStamp("Sealed", true);
+    $("#open-ok").focus({ preventScroll: true });
     busy = false;
   });
 }
-function open() {
-  env.dataset.state = "open";
-  armor.hidden = true;
-  msg.hidden = false;
-  stateEl.textContent = "Bruno opened it with his key. Anyone else sees only the block you just saw.";
-  setLabel("Seal message", "lock-simple");
+function reopen(state, msgText) {
+  setState(state, msgText);
 }
-sealBtn.addEventListener("click", () => (env.dataset.state === "sealed" ? open() : seal()));
+$("#open-ok").addEventListener("click", () => {
+  tapeText.dataset.void = "false";
+  stamp.classList.remove("on");
+  setState("open", "Bruno opened it with his key. Anyone else sees only the block you just saw.");
+  pair.hidden = true;
+  sealBtn.hidden = false;
+  sealLabel.textContent = "Hold to seal again";
+  sealNo.innerHTML = "No. &mdash; &mdash; &mdash;";
+  hint.textContent = "Press and hold, or press Enter. This is a demo: nothing is encrypted in your browser.";
+  sealBtn.focus({ preventScroll: true });
+});
+$("#open-no").addEventListener("click", () => {
+  tapeText.dataset.void = "true";
+  reopen("void", "Access denied. Without Bruno's key it stays unreadable.");
+  showStamp("Void", false);
+  tape.classList.remove("shake");
+  void tape.offsetWidth;
+  tape.classList.add("shake");
+});
 msg.addEventListener("input", () => {
-  stateEl.textContent = "Anyone can read this.";
+  statusEl.textContent = "Open. Anyone can read this.";
+});
+
+// Press and hold (pointer), or Enter / Space (keyboard, instant: no animation, no wait).
+let holdTimer = 0;
+const cancelHold = () => {
+  clearTimeout(holdTimer);
+  holdTimer = 0;
+  sealBtn.classList.remove("holding");
+};
+sealBtn.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0 || busy) return;
+  sealBtn.setPointerCapture(e.pointerId);
+  sealBtn.classList.add("holding");
+  holdTimer = setTimeout(() => {
+    cancelHold();
+    seal();
+  }, HOLD_MS);
+});
+["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => sealBtn.addEventListener(t, cancelHold));
+sealBtn.addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
+    e.preventDefault();
+    seal();
+  }
 });
 
 // ---- copy command
@@ -171,7 +227,7 @@ fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { Accep
       if (link) link.href = a.browser_download_url;
     }
     $("#ver").textContent = `Free and open source under GPL-3.0. Latest version: ${rel.tag_name}.`;
-    // Direct download for Windows and Linux; macOS needs a choice between Apple Silicon and Intel.
+    $("#ver-short").textContent = rel.tag_name;
     const direct = os === "win" ? found.win : os === "linux" ? found.appimage : null;
     if (direct) $("#cta").href = direct;
   })
