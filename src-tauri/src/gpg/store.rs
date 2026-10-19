@@ -1,8 +1,11 @@
 //! On-disk keyring: one ASCII-armored certificate (with secret parts, if any)
 //! per file, named by the primary key's fingerprint.
 //!
-//! Secret material is stored exactly as generated/imported, i.e. protected by
-//! the user's passphrase when one was set.
+//! Secret material protected by a passphrase is stored exactly as
+//! generated/imported. Secret keys *without* a passphrase are moved to the OS
+//! credential store and only the public part stays on disk (marked by a
+//! `<FP>.vault` file). If the credential store is unavailable the key simply
+//! stays in the file, as before.
 
 use std::collections::HashMap;
 use std::fs;
@@ -14,6 +17,7 @@ use openpgp::parse::Parse;
 use openpgp::serialize::SerializeInto;
 use sequoia_openpgp as openpgp;
 
+use super::vault::{OsVault, SecretVault};
 use super::wot::Trust;
 use super::{GpgError, Result};
 
@@ -46,10 +50,20 @@ pub struct KeyStore {
     dir: PathBuf,
     /// Ownertrust per fingerprint, persisted in `trust.json`.
     trust: Mutex<HashMap<String, Trust>>,
+    vault: Box<dyn SecretVault>,
+}
+
+/// True when some secret key in `cert` is stored without passphrase protection.
+fn has_unprotected_secret(cert: &Cert) -> bool {
+    cert.keys().secret().any(|k| !k.key().secret().is_encrypted())
 }
 
 impl KeyStore {
     pub fn open(dir: PathBuf) -> std::io::Result<Self> {
+        Self::open_with(dir, Box::new(OsVault))
+    }
+
+    pub fn open_with(dir: PathBuf, vault: Box<dyn SecretVault>) -> std::io::Result<Self> {
         fs::create_dir_all(&dir)?;
         #[cfg(unix)]
         {
@@ -60,7 +74,72 @@ impl KeyStore {
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
             .unwrap_or_default();
-        Ok(Self { dir, trust: Mutex::new(trust) })
+        let store = Self { dir, trust: Mutex::new(trust), vault };
+        store.migrate_unprotected();
+        Ok(store)
+    }
+
+    /// Moves existing unprotected secret keys into the credential store.
+    fn migrate_unprotected(&self) {
+        let Ok(entries) = fs::read_dir(&self.dir) else { return };
+        for path in entries.flatten().map(|e| e.path()) {
+            if path.extension().and_then(|e| e.to_str()) != Some("asc") {
+                continue;
+            }
+            if let Ok(cert) = Cert::from_file(&path) {
+                if has_unprotected_secret(&cert) {
+                    // Best effort: on failure the file is left untouched.
+                    let _ = self.write_cert(&cert);
+                }
+            }
+        }
+    }
+
+    fn marker_for(&self, fingerprint: &str) -> Result<PathBuf> {
+        Ok(self.path_for(fingerprint)?.with_extension("vault"))
+    }
+
+    /// Writes `cert` to disk. An unprotected secret goes to the vault first,
+    /// is read back to verify it, and only then removed from the file.
+    fn write_cert(&self, cert: &Cert) -> Result<()> {
+        let fp = cert.fingerprint().to_hex();
+        let path = self.path_for(&fp)?;
+        let marker = self.marker_for(&fp)?;
+
+        if cert.is_tsk() && has_unprotected_secret(cert) {
+            let secret = zeroize::Zeroizing::new(cert.as_tsk().to_vec()?);
+            let stored = self.vault.set(&fp, &secret).is_ok()
+                && self.vault.get(&fp).map(|b| *b == *secret).unwrap_or(false);
+            if stored {
+                let public = cert.clone().strip_secret_key_material().armored().to_vec()?;
+                write_private(&marker, b"")?;
+                write_private(&path, &public)?;
+                return Ok(());
+            }
+            self.vault.delete(&fp);
+        }
+
+        // Plain file: passphrase-protected secret, public-only, or no vault.
+        write_private(&path, &cert.as_tsk().armored().to_vec()?)?;
+        if marker.exists() {
+            fs::remove_file(&marker)?;
+            self.vault.delete(&fp);
+        }
+        Ok(())
+    }
+
+    /// Reads a certificate, re-attaching its secret from the vault if needed.
+    fn read_cert(&self, path: &std::path::Path) -> Result<Cert> {
+        let cert = Cert::from_file(path)?;
+        if !path.with_extension("vault").exists() {
+            return Ok(cert);
+        }
+        let fp = cert.fingerprint().to_hex();
+        match self.vault.get(&fp).ok().and_then(|b| Cert::from_bytes(&b).ok()) {
+            Some(secret) => Ok(cert.merge_public_and_secret(secret)?),
+            // Vault entry gone or locked: keep the public key usable.
+            None => Ok(cert),
+        }
     }
 
     fn path_for(&self, fingerprint: &str) -> Result<PathBuf> {
@@ -80,7 +159,7 @@ impl KeyStore {
                 continue;
             }
             // Skip unreadable files rather than hiding the whole keyring.
-            if let Ok(cert) = Cert::from_file(&path) {
+            if let Ok(cert) = self.read_cert(&path) {
                 certs.push(cert);
             }
         }
@@ -92,7 +171,7 @@ impl KeyStore {
         if !path.exists() {
             return Err(GpgError::KeyNotFound(fingerprint.to_string()));
         }
-        Cert::from_file(path).map_err(Into::into)
+        self.read_cert(&path)
     }
 
     /// Insert or merge. Merging never drops existing secret key material.
@@ -103,9 +182,7 @@ impl KeyStore {
             Err(GpgError::KeyNotFound(_)) => cert,
             Err(e) => return Err(e),
         };
-        let bytes = merged.as_tsk().armored().to_vec()?;
-        let path = self.path_for(&fp)?;
-        write_private(&path, &bytes)?;
+        self.write_cert(&merged)?;
         Ok(merged)
     }
 
@@ -115,6 +192,11 @@ impl KeyStore {
             return Err(GpgError::KeyNotFound(fingerprint.to_string()));
         }
         fs::remove_file(path)?;
+        let marker = self.marker_for(fingerprint)?;
+        if marker.exists() {
+            fs::remove_file(marker)?;
+        }
+        self.vault.delete(&fingerprint.trim().to_uppercase());
         let mut trust = self.trust.lock().unwrap();
         if trust.remove(&fingerprint.to_uppercase()).is_some() {
             self.persist_trust(&trust)?;
@@ -148,6 +230,89 @@ impl KeyStore {
         let path = self.dir.join("trust.json");
         write_private(&path, &bytes)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod vault_tests {
+    use super::*;
+    use openpgp::cert::CertBuilder;
+    use std::sync::Arc;
+    use zeroize::Zeroizing;
+
+    #[derive(Default, Clone)]
+    struct MemVault(Arc<Mutex<HashMap<String, Vec<u8>>>>);
+
+    impl SecretVault for MemVault {
+        fn set(&self, fp: &str, s: &[u8]) -> std::result::Result<(), String> {
+            self.0.lock().unwrap().insert(fp.into(), s.to_vec());
+            Ok(())
+        }
+        fn get(&self, fp: &str) -> std::result::Result<Zeroizing<Vec<u8>>, String> {
+            self.0.lock().unwrap().get(fp).cloned().map(Zeroizing::new).ok_or("missing".into())
+        }
+        fn delete(&self, fp: &str) {
+            self.0.lock().unwrap().remove(fp);
+        }
+    }
+
+    struct FailVault;
+    impl SecretVault for FailVault {
+        fn set(&self, _: &str, _: &[u8]) -> std::result::Result<(), String> { Err("no".into()) }
+        fn get(&self, _: &str) -> std::result::Result<Zeroizing<Vec<u8>>, String> { Err("no".into()) }
+        fn delete(&self, _: &str) {}
+    }
+
+    fn tmp(name: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("aegis-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&d);
+        d
+    }
+
+    #[test]
+    fn unprotected_secret_leaves_disk_and_round_trips() {
+        let dir = tmp("vault");
+        let vault = MemVault::default();
+        let store = KeyStore::open_with(dir.clone(), Box::new(vault.clone())).unwrap();
+        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let fp = cert.fingerprint().to_hex();
+        store.put(cert).unwrap();
+
+        let on_disk = Cert::from_file(dir.join(format!("{fp}.asc"))).unwrap();
+        assert!(!on_disk.is_tsk(), "secret must not be in the file");
+        assert!(store.get(&fp).unwrap().is_tsk(), "secret is re-attached from the vault");
+        assert!(store.all().unwrap()[0].is_tsk());
+
+        store.delete(&fp).unwrap();
+        assert!(vault.get(&fp).is_err());
+        assert!(!dir.join(format!("{fp}.vault")).exists());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn existing_file_is_migrated_on_open() {
+        let dir = tmp("migrate");
+        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let fp = cert.fingerprint().to_hex();
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join(format!("{fp}.asc")), cert.as_tsk().armored().to_vec().unwrap()).unwrap();
+
+        let store = KeyStore::open_with(dir.clone(), Box::new(MemVault::default())).unwrap();
+        assert!(!Cert::from_file(dir.join(format!("{fp}.asc"))).unwrap().is_tsk());
+        assert!(store.get(&fp).unwrap().is_tsk());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn unavailable_vault_keeps_secret_in_file() {
+        let dir = tmp("fallback");
+        let store = KeyStore::open_with(dir.clone(), Box::new(FailVault)).unwrap();
+        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let fp = cert.fingerprint().to_hex();
+        store.put(cert).unwrap();
+        assert!(Cert::from_file(dir.join(format!("{fp}.asc"))).unwrap().is_tsk());
+        assert!(!dir.join(format!("{fp}.vault")).exists());
+        fs::remove_dir_all(dir).unwrap();
     }
 }
 

@@ -66,6 +66,9 @@ export const api = {
   saveTeam: (name: string, members: string[], id?: string) => invoke<Team>("save_team", { id, name, members }),
   deleteTeam: (id: string) => invoke<void>("delete_team", { id }),
 
+  setPassphraseTtl: (seconds: number) => invoke<void>("set_passphrase_ttl", { seconds }),
+  clearPassphraseCache: () => invoke<void>("clear_passphrase_cache"),
+
   decryptText: (armored: string, passphrase?: string) =>
     invoke<TextDecryptResult>("decrypt_text", { armored, passphrase }),
 };

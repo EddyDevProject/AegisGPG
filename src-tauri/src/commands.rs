@@ -9,10 +9,11 @@ use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::spawn_blocking, AppHandle, Emitter, State};
 use zeroize::Zeroizing;
 
-use crate::gpg::crypto::{self, EncryptOptions, SignatureStatus};
+use crate::gpg::crypto::{self, EncryptOptions, SignatureStatus, Unlocked};
 use crate::gpg::certify::{self, Level};
 use crate::gpg::keys::{self, GenerateKeyRequest, KeyInfo, SubkeyInfo};
 use crate::gpg::net::{self, Server, UploadReport};
+use crate::gpg::passphrase_cache::PassphraseCache;
 use crate::gpg::qr;
 use crate::gpg::store::KeyStore;
 use crate::gpg::teams::{Team, TeamStore};
@@ -23,6 +24,40 @@ const CHUNK: usize = 256 * 1024;
 
 fn secret(s: Option<String>) -> Option<Zeroizing<String>> {
     s.filter(|p| !p.is_empty()).map(Zeroizing::new)
+}
+
+/// The passphrase to use for one operation: what the user just typed, else a cached one.
+struct Unlock {
+    pass: Option<Zeroizing<String>>,
+    typed: bool,
+}
+
+impl Unlock {
+    fn new(cache: &PassphraseCache, fingerprint: Option<&str>, typed: Option<String>) -> Self {
+        match secret(typed) {
+            Some(pass) => Self { pass: Some(pass), typed: true },
+            None => Self { pass: fingerprint.and_then(|fp| cache.get(fp)), typed: false },
+        }
+    }
+
+    fn as_str(&self) -> Option<&str> {
+        self.pass.as_ref().map(|p| p.as_str())
+    }
+
+    /// Remembers a typed passphrase that worked; forgets a cached one that no
+    /// longer does (the caller then simply asks the user again).
+    fn settle<T>(&self, cache: &PassphraseCache, fingerprint: Option<&str>, result: Result<T>) -> Result<T> {
+        let (Some(fp), Some(pass)) = (fingerprint, &self.pass) else { return result };
+        match &result {
+            Ok(_) if self.typed => cache.store(fp, pass),
+            Err(GpgError::WrongPassphrase) if !self.typed => {
+                cache.forget(fp);
+                return Err(GpgError::PassphraseRequired);
+            }
+            _ => {}
+        }
+        result
+    }
 }
 
 fn join_err(e: tauri::Error) -> GpgError {
@@ -249,6 +284,7 @@ pub struct EncryptRequest {
 pub async fn encrypt_file(
     app: AppHandle,
     store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
     request: EncryptRequest,
 ) -> Result<String> {
     let recipients = request
@@ -257,7 +293,8 @@ pub async fn encrypt_file(
         .map(|fp| store.get(fp).map_err(|_| GpgError::MissingRecipient(fp.clone())))
         .collect::<Result<Vec<_>>>()?;
     let signer = request.sign_with.as_deref().map(|fp| store.get(fp)).transpose()?;
-    let pass = secret(request.passphrase);
+    let sign_fp = request.sign_with.clone();
+    let unlock = Unlock::new(&cache, sign_fp.as_deref(), request.passphrase);
 
     let out_path = request
         .output_path
@@ -266,7 +303,8 @@ pub async fn encrypt_file(
     let in_path = PathBuf::from(request.input_path);
     let armor = request.armor;
 
-    spawn_blocking(move || -> Result<String> {
+    let pass = unlock.pass.clone();
+    let result = spawn_blocking(move || -> Result<String> {
         let file = File::open(&in_path)?;
         let total = file.metadata()?.len();
         let reader = ProgressReader::new(BufReader::with_capacity(CHUNK, file), app, &in_path, total);
@@ -285,7 +323,8 @@ pub async fn encrypt_file(
         Ok(out_path.to_string_lossy().into_owned())
     })
     .await
-    .map_err(join_err)?
+    .map_err(join_err)?;
+    unlock.settle(&cache, sign_fp.as_deref(), result)
 }
 
 #[derive(Deserialize)]
@@ -305,10 +344,12 @@ pub struct DecryptResult {
 pub async fn decrypt_file(
     app: AppHandle,
     store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
     request: DecryptRequest,
 ) -> Result<DecryptResult> {
     let certs = store.all()?;
     let pass = secret(request.passphrase);
+    let cached = cache.snapshot();
     let in_path = PathBuf::from(&request.input_path);
     let out_path = request.output_path.map(PathBuf::from).unwrap_or_else(|| {
         let s = request.input_path.as_str();
@@ -322,17 +363,17 @@ pub async fn decrypt_file(
         })
     });
 
-    spawn_blocking(move || -> Result<DecryptResult> {
+    let (result, unlocked) = spawn_blocking(move || -> Result<(DecryptResult, Option<Unlocked>)> {
         let file = File::open(&in_path)?;
         let total = file.metadata()?.len();
         let reader = ProgressReader::new(BufReader::with_capacity(CHUNK, file), app, &in_path, total);
         let writer = BufWriter::with_capacity(CHUNK, File::create(&out_path)?);
 
-        match crypto::decrypt(reader, writer, certs, pass.as_ref().map(|p| p.as_str())) {
-            Ok(signatures) => Ok(DecryptResult {
-                output_path: out_path.to_string_lossy().into_owned(),
-                signatures,
-            }),
+        match crypto::decrypt(reader, writer, certs, pass.as_ref().map(|p| p.as_str()), cached) {
+            Ok((signatures, unlocked)) => Ok((
+                DecryptResult { output_path: out_path.to_string_lossy().into_owned(), signatures },
+                unlocked,
+            )),
             Err(e) => {
                 let _ = fs::remove_file(&out_path);
                 Err(e)
@@ -340,7 +381,11 @@ pub async fn decrypt_file(
         }
     })
     .await
-    .map_err(join_err)?
+    .map_err(join_err)??;
+    if let Some(u) = unlocked {
+        cache.store(&u.fingerprint, &u.passphrase);
+    }
+    Ok(result)
 }
 
 // ------------------------------------------------------------- text ----
@@ -348,6 +393,7 @@ pub async fn decrypt_file(
 #[tauri::command]
 pub async fn encrypt_text(
     store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
     text: String,
     recipients: Vec<String>,
     sign_with: Option<String>,
@@ -359,19 +405,20 @@ pub async fn encrypt_text(
         .map(|fp| store.get(fp).map_err(|_| GpgError::MissingRecipient(fp.clone())))
         .collect::<Result<Vec<_>>>()?;
     let signer = sign_with.as_deref().map(|fp| store.get(fp)).transpose()?;
-    let pass = secret(passphrase);
+    let unlock = Unlock::new(&cache, sign_with.as_deref(), passphrase);
 
     let mut out = Vec::new();
-    crypto::encrypt(
+    let result = crypto::encrypt(
         Cursor::new(text.as_bytes()),
         &mut out,
         &EncryptOptions {
             recipients: &recipients,
             signer: signer.as_ref(),
-            passphrase: pass.as_ref().map(|p| p.as_str()),
+            passphrase: unlock.as_str(),
             armor: true,
         },
-    )?;
+    );
+    unlock.settle(&cache, sign_with.as_deref(), result)?;
     String::from_utf8(out).map_err(|_| GpgError::Other("Encryption produced invalid text".into()))
 }
 
@@ -384,18 +431,23 @@ pub struct TextDecryptResult {
 #[tauri::command]
 pub async fn decrypt_text(
     store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
     armored: String,
     passphrase: Option<String>,
 ) -> Result<TextDecryptResult> {
     let certs = store.all()?;
     let pass = secret(passphrase);
     let mut out = Vec::new();
-    let signatures = crypto::decrypt(
+    let (signatures, unlocked) = crypto::decrypt(
         Cursor::new(armored.into_bytes()),
         &mut out,
         certs,
         pass.as_ref().map(|p| p.as_str()),
+        cache.snapshot(),
     )?;
+    if let Some(u) = unlocked {
+        cache.store(&u.fingerprint, &u.passphrase);
+    }
     let text = String::from_utf8(out)
         .map_err(|_| GpgError::InvalidInput("Decrypted content is not valid UTF-8 text".into()))?;
     Ok(TextDecryptResult { text, signatures })
@@ -447,19 +499,22 @@ pub struct CertifyRequest {
 #[tauri::command]
 pub async fn certify_key(
     store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
     request: CertifyRequest,
 ) -> Result<KeyInfo> {
     let target = store.get(&request.target)?;
     let signer = store.get(&request.signer)?;
-    let pass = secret(request.passphrase);
+    let unlock = Unlock::new(&cache, Some(&request.signer), request.passphrase);
     let level = request.level;
     let user_ids = request.user_ids;
 
-    let certified = spawn_blocking(move || {
+    let pass = unlock.pass.clone();
+    let result = spawn_blocking(move || {
         certify::certify(&target, &signer, level, &user_ids, pass.as_ref().map(|p| p.as_str()))
     })
     .await
-    .map_err(join_err)??;
+    .map_err(join_err)?;
+    let certified = unlock.settle(&cache, Some(&request.signer), result)?;
 
     let cert = store.put(certified)?;
     describe_one(&store, &cert.fingerprint().to_hex())
@@ -645,4 +700,17 @@ pub async fn import_from_uri(
         .ok_or_else(|| GpgError::NotFound(fp.clone()))?;
     store.put(cert)?;
     describe_one(&store, &fp)
+}
+
+// ------------------------------------------------ passphrase cache ----
+
+/// Seconds to remember a typed passphrase; 0 turns the cache off.
+#[tauri::command]
+pub fn set_passphrase_ttl(cache: State<'_, PassphraseCache>, seconds: u64) {
+    cache.set_ttl(seconds);
+}
+
+#[tauri::command]
+pub fn clear_passphrase_cache(cache: State<'_, PassphraseCache>) {
+    cache.clear();
 }

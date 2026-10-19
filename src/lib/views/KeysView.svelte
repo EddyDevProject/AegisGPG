@@ -8,7 +8,7 @@
   import ImportKeyModal from "../components/ImportKeyModal.svelte";
   import QrModal from "../components/QrModal.svelte";
   import ExportKeyModal from "../components/ExportKeyModal.svelte";
-  import { askConfirm, errorMessage, fmtDate, keyLabel, keyring, prefs, refreshKeys, setAvatars, shortFp, toast, ui } from "../stores.svelte";
+  import { askConfirm, errorMessage, fmtDate, keyLabel, keyring, prefs, refreshKeys, setAvatars, setRememberPassphrase, shortFp, toast, ui } from "../stores.svelte";
   import { btn, card } from "../ui";
   import type { KeyInfo } from "../types";
 
@@ -43,6 +43,10 @@
     <label class="flex items-center gap-1.5 text-xs text-zinc-500" title="Sends a hash of each contact's email address to libravatar.org / gravatar.com">
       <input type="checkbox" checked={prefs.avatars} onchange={(e) => setAvatars(e.currentTarget.checked)} />
       Online avatars
+    </label>
+    <label class="flex items-center gap-1.5 text-xs text-zinc-500" title="Keeps a passphrase you typed in memory for 5 minutes, so you are not asked again. It is never written to disk.">
+      <input type="checkbox" checked={prefs.rememberPassphrase} onchange={(e) => setRememberPassphrase(e.currentTarget.checked)} />
+      Remember passphrase (5 min)
     </label>
     <button class={btn.outline} onclick={() => (modal = "import")}>Import</button>
     <button class={btn.primary} onclick={() => (modal = "generate")}>Generate key</button>

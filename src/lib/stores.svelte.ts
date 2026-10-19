@@ -168,7 +168,25 @@ function pref(key: string, fallback: boolean): boolean {
   }
 }
 /** Avatars are fetched from third parties using a hash of the email. */
-export const prefs = $state({ avatars: pref("avatars", true), encryptToSelf: pref("encryptToSelf", true) });
+export const prefs = $state({
+  avatars: pref("avatars", true),
+  encryptToSelf: pref("encryptToSelf", true),
+  rememberPassphrase: pref("rememberPassphrase", true),
+});
+
+/** Seconds the backend keeps a typed passphrase in memory. */
+const PASSPHRASE_TTL = 5 * 60;
+
+/** Pushes the preference to the backend (also empties its cache when turned off). */
+export function setRememberPassphrase(on: boolean) {
+  prefs.rememberPassphrase = on;
+  try {
+    localStorage.setItem("rememberPassphrase", on ? "1" : "0");
+  } catch {}
+  void api.setPassphraseTtl(on ? PASSPHRASE_TTL : 0);
+}
+// The backend starts with caching on; apply a stored "off" straight away.
+if (!prefs.rememberPassphrase) void api.setPassphraseTtl(0);
 export function setAvatars(on: boolean) {
   prefs.avatars = on;
   try {

@@ -20,6 +20,9 @@ fn set_dev_dock_icon() {
     }
 }
 
+/// How long a typed passphrase is remembered; the UI can change or disable it.
+const DEFAULT_PASSPHRASE_TTL_SECS: u64 = 300;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -32,6 +35,7 @@ pub fn run() {
             let dir = app.path().app_data_dir()?.join("keyring");
             app.manage(gpg::teams::TeamStore::open(dir.clone()));
             app.manage(gpg::store::KeyStore::open(dir)?);
+            app.manage(gpg::passphrase_cache::PassphraseCache::new(DEFAULT_PASSPHRASE_TTL_SECS));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -61,6 +65,8 @@ pub fn run() {
             commands::list_teams,
             commands::save_team,
             commands::delete_team,
+            commands::set_passphrase_ttl,
+            commands::clear_passphrase_cache,
             email::send_via_default_mail_client,
         ])
         .run(tauri::generate_context!())

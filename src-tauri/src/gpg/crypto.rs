@@ -3,6 +3,7 @@
 //! All entry points work on `Read`/`Write`, so files are processed in
 //! chunks (never fully buffered) and the same code serves the text tools.
 
+use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::sync::{Arc, Mutex};
 
@@ -111,10 +112,25 @@ fn signing_keypair(
     Ok(key.into_keypair()?)
 }
 
+/// A key that was unlocked with the passphrase the caller supplied (not a cached one).
+pub struct Unlocked {
+    pub fingerprint: String,
+    pub passphrase: Zeroizing<String>,
+}
+
+impl std::fmt::Debug for Unlocked {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Unlocked").field("fingerprint", &self.fingerprint).finish_non_exhaustive()
+    }
+}
+
 struct Helper {
     /// Every cert in the keyring: used both for decryption and verification.
     certs: Vec<Cert>,
     passphrase: Option<Zeroizing<String>>,
+    /// Remembered passphrases by cert fingerprint, tried when none was supplied.
+    cached: HashMap<String, Zeroizing<String>>,
+    unlocked: Arc<Mutex<Option<Unlocked>>>,
     results: Arc<Mutex<Vec<SignatureStatus>>>,
 }
 
@@ -190,22 +206,37 @@ impl DecryptionHelper for Helper {
                         continue;
                     }
                     let mut key = ka.key().clone();
+                    let mut typed: Option<Unlocked> = None;
                     if key.secret().is_encrypted() {
-                        let Some(pw) = &self.passphrase else {
-                            needs_passphrase = true;
-                            continue;
+                        let cert_fp = cert.fingerprint().to_hex();
+                        let (pw, from_cache) = match (&self.passphrase, self.cached.get(&cert_fp)) {
+                            (Some(p), _) => (p, false),
+                            (None, Some(p)) => (p, true),
+                            (None, None) => {
+                                needs_passphrase = true;
+                                continue;
+                            }
                         };
                         match key.decrypt_secret(&Password::from(pw.as_str())) {
                             Ok(k) => key = k,
                             Err(_) => {
-                                wrong_passphrase = true;
+                                // A stale cached passphrase is just "ask again".
+                                if from_cache {
+                                    needs_passphrase = true;
+                                } else {
+                                    wrong_passphrase = true;
+                                }
                                 continue;
                             }
+                        }
+                        if !from_cache {
+                            typed = Some(Unlocked { fingerprint: cert_fp, passphrase: pw.clone() });
                         }
                     }
                     let mut pair = key.into_keypair()?;
                     if let Some((algo, sk)) = pkesk.decrypt(&mut pair, sym_algo) {
                         if decrypt(algo, &sk) {
+                            *self.unlocked.lock().unwrap() = typed;
                             return Ok(Some(ka.cert().fingerprint()));
                         }
                     }
@@ -226,18 +257,23 @@ impl DecryptionHelper for Helper {
 
 /// Decrypts `input` into `output` and returns the signature verdicts.
 /// Signatures are checked as the stream is consumed; callers should discard
-/// the output if this returns `Err`.
+/// the output if this returns `Err`. Also returns the key unlocked by
+/// `passphrase`, if any, so the caller can remember it.
 pub fn decrypt<R: Read + Send + Sync, W: Write>(
     input: R,
     mut output: W,
     certs: Vec<Cert>,
     passphrase: Option<&str>,
-) -> Result<Vec<SignatureStatus>> {
+    cached: HashMap<String, Zeroizing<String>>,
+) -> Result<(Vec<SignatureStatus>, Option<Unlocked>)> {
     let policy = StandardPolicy::new();
     let results = Arc::new(Mutex::new(Vec::new()));
+    let unlocked = Arc::new(Mutex::new(None));
     let helper = Helper {
         certs,
         passphrase: passphrase.filter(|p| !p.is_empty()).map(|p| Zeroizing::new(p.to_string())),
+        cached,
+        unlocked: unlocked.clone(),
         results: results.clone(),
     };
 
@@ -258,7 +294,8 @@ pub fn decrypt<R: Read + Send + Sync, W: Write>(
     output.flush()?;
 
     let out = results.lock().unwrap().clone();
-    Ok(out)
+    let unlocked = unlocked.lock().unwrap().take();
+    Ok((out, unlocked))
 }
 
 #[cfg(test)]
@@ -294,14 +331,27 @@ mod tests {
 
         // No passphrase -> typed error; wrong -> typed error; right -> ok.
         let mut sink = Vec::new();
-        let e = decrypt(Cursor::new(ct.clone()), &mut sink, vec![k.clone()], None).unwrap_err();
+        let e = decrypt(Cursor::new(ct.clone()), &mut sink, vec![k.clone()], None, HashMap::new()).unwrap_err();
         assert!(matches!(e, GpgError::PassphraseRequired), "{e:?}");
-        let e = decrypt(Cursor::new(ct.clone()), &mut sink, vec![k.clone()], Some("nope")).unwrap_err();
+        let e = decrypt(Cursor::new(ct.clone()), &mut sink, vec![k.clone()], Some("nope"), HashMap::new()).unwrap_err();
         assert!(matches!(e, GpgError::WrongPassphrase), "{e:?}");
 
         let mut pt = Vec::new();
-        let sigs = decrypt(Cursor::new(ct), &mut pt, vec![k], Some("hunter2")).unwrap();
+        let (sigs, unlocked) = decrypt(Cursor::new(ct.clone()), &mut pt, vec![k.clone()], Some("hunter2"), HashMap::new()).unwrap();
         assert_eq!(pt, b"hello world");
+        let unlocked = unlocked.expect("typed passphrase is reported");
+        assert_eq!(unlocked.fingerprint, k.fingerprint().to_hex());
+        assert_eq!(unlocked.passphrase.as_str(), "hunter2");
+
+        // A cached passphrase unlocks without being reported again; a stale one asks again.
+        let cache = HashMap::from([(k.fingerprint().to_hex(), Zeroizing::new("hunter2".to_string()))]);
+        let mut pt2 = Vec::new();
+        let (_, again) = decrypt(Cursor::new(ct.clone()), &mut pt2, vec![k.clone()], None, cache).unwrap();
+        assert_eq!(pt2, b"hello world");
+        assert!(again.is_none());
+        let stale = HashMap::from([(k.fingerprint().to_hex(), Zeroizing::new("old".to_string()))]);
+        let e = decrypt(Cursor::new(ct), &mut Vec::new(), vec![k], None, stale).unwrap_err();
+        assert!(matches!(e, GpgError::PassphraseRequired), "{e:?}");
         assert!(matches!(sigs[..], [SignatureStatus::Valid { .. }]), "{sigs:?}");
     }
 
@@ -317,10 +367,10 @@ mod tests {
         )
         .unwrap();
         let mut pt = Vec::new();
-        let sigs = decrypt(Cursor::new(ct.clone()), &mut pt, vec![other], None).unwrap();
+        let (sigs, _) = decrypt(Cursor::new(ct.clone()), &mut pt, vec![other], None, HashMap::new()).unwrap();
         assert!(matches!(sigs[..], [SignatureStatus::UnknownSigner { .. }]), "{sigs:?}");
 
-        let e = decrypt(Cursor::new(ct), &mut Vec::new(), vec![signer], None).unwrap_err();
+        let e = decrypt(Cursor::new(ct), &mut Vec::new(), vec![signer], None, HashMap::new()).unwrap_err();
         assert!(matches!(e, GpgError::NoSecretKey), "{e:?}");
     }
 }

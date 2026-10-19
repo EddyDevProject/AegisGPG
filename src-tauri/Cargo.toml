@@ -47,3 +47,11 @@ strip = true
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["NSApplication", "NSResponder", "NSImage"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["NSData"] }
+# OS credential store for unprotected secret keys.
+keyring = { version = "3.6", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3.6", default-features = false, features = ["windows-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3.6", default-features = false, features = ["sync-secret-service", "crypto-rust", "vendored"] }
