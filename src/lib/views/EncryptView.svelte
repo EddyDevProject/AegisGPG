@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { save } from "@tauri-apps/plugin-dialog";
   import { api, onProgress } from "../api";
@@ -88,22 +89,22 @@
   }
 </script>
 
-<h2 class="mb-4 text-lg font-semibold">Encrypt &amp; Sign</h2>
+<h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">Encrypt &amp; Sign <InfoTip text="Protect a file. Encrypting makes it readable only by the chosen recipients; signing proves it came from you and was not altered. You can do both or just one." /></h2>
 
 <div class="grid max-w-2xl gap-4">
   <FileDropzone path={file} onfile={(p) => ((file = p), (outputPath = null))} />
 
   <div class="{card} grid gap-4">
     <div class="flex flex-wrap gap-6 text-sm">
-      <label class="flex items-center gap-2"><input type="checkbox" bind:checked={doEncrypt} /> Encrypt with public key(s)</label>
-      <label class="flex items-center gap-2"><input type="checkbox" bind:checked={doSign} /> Sign with my private key</label>
+      <label class="flex items-center gap-2"><input type="checkbox" bind:checked={doEncrypt} /> Encrypt with public key(s) <InfoTip text="Only the selected recipients will be able to open the file, using their secret keys." /></label>
+      <label class="flex items-center gap-2"><input type="checkbox" bind:checked={doSign} /> Sign with my private key <InfoTip text="Attaches a digital signature so recipients can verify the file is yours and has not been modified. Needs your key passphrase." /></label>
     </div>
 
     {#if doEncrypt}
       <div><span class={label}>Recipients</span><RecipientSelect bind:selected={recipients} /></div>
     <label class="flex items-center gap-2 text-sm">
       <input type="checkbox" checked={prefs.encryptToSelf} onchange={(e) => setEncryptToSelf(e.currentTarget.checked)} />
-      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span>
+      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span> <InfoTip text="Adds your own key to the recipients. Without it, you could not open the file you just encrypted for someone else." />
     </label>
 {/if}
 
@@ -118,7 +119,7 @@
     {/if}
 
     <fieldset class="flex gap-6 text-sm">
-      <legend class={label}>Output format</legend>
+      <legend class={label}>Output format <InfoTip text="Binary (.gpg) is smaller and best for attachments. ASCII armor (.asc) is plain text, safe to paste into an email or chat." /></legend>
       <label class="flex items-center gap-2"><input type="radio" name="fmt" checked={!armor} onchange={() => (armor = false)} /> Binary (.gpg)</label>
       <label class="flex items-center gap-2"><input type="radio" name="fmt" checked={armor} onchange={() => (armor = true)} /> ASCII armor (.asc)</label>
     </fieldset>

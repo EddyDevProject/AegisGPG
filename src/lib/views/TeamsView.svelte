@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { api } from "../api";
   import TeamModal from "../components/TeamModal.svelte";
@@ -30,7 +31,7 @@
 </script>
 
 <div class="mb-4 flex items-center justify-between">
-  <h2 class="text-lg font-semibold">Teams</h2>
+  <h2 class="flex items-center gap-2 text-lg font-semibold">Teams <InfoTip text="Named groups of keys, to encrypt for many people in one step. Stored only on this device." /></h2>
   <button class={btn.primary} onclick={() => (creating = true)}>New team</button>
 </div>
 

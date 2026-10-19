@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { api } from "../api";
   import Avatar from "../components/Avatar.svelte";
@@ -100,11 +101,11 @@
   };
 </script>
 
-<h2 class="mb-4 text-lg font-semibold">Discover &amp; Sync</h2>
+<h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">Discover &amp; Sync <InfoTip text="Find other people's public keys online, publish yours so others can find it, and refresh your keyring to catch updates and revocations." /></h2>
 
 <div class="grid max-w-3xl gap-5">
   <section class="{card} grid gap-3" aria-labelledby="find">
-    <h3 id="find" class="text-sm font-semibold">Find a key</h3>
+    <h3 id="find" class="flex items-center gap-1.5 text-sm font-semibold">Find a key <InfoTip text="Search a keyserver or a domain's Web Key Directory for someone's public key by email or fingerprint, then import it. Always verify the fingerprint with the owner." /></h3>
     <form class="grid gap-3 sm:grid-cols-[1fr_auto_auto]" onsubmit={search}>
       <input
         class={input}
@@ -148,7 +149,7 @@
   </section>
 
   <section class="{card} grid gap-3" aria-labelledby="pub">
-    <h3 id="pub" class="text-sm font-semibold">Publish my public key</h3>
+    <h3 id="pub" class="flex items-center gap-1.5 text-sm font-semibold">Publish my public key <InfoTip text="Uploads your public key (never the secret one) to a keyserver so others can find it by email. keys.openpgp.org sends a verification email before making the address searchable." /></h3>
     {#if !own.length}
       <p class="text-sm text-zinc-500">Generate a key of your own first.</p>
     {:else}
@@ -178,7 +179,7 @@
   </section>
 
   <section class="{card} grid gap-3" aria-labelledby="sync">
-    <h3 id="sync" class="text-sm font-semibold">Update keys &amp; check revocations</h3>
+    <h3 id="sync" class="flex items-center gap-1.5 text-sm font-semibold">Update keys &amp; check revocations <InfoTip text="Asks the keyserver for newer versions of all your keys. This picks up new expiry dates and, importantly, keys their owners have revoked because they are compromised or retired." /></h3>
     <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
       <div>
         <label class={label} for="rs">Keyserver</label>

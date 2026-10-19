@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { api, onProgress } from "../api";
   import FileDropzone from "../components/FileDropzone.svelte";
@@ -47,7 +48,7 @@
   }
 </script>
 
-<h2 class="mb-4 text-lg font-semibold">Decrypt &amp; Verify</h2>
+<h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">Decrypt &amp; Verify <InfoTip text="Open a file encrypted for you with your secret key. If it was also signed, you will see whether the signature is valid and who made it." /></h2>
 
 <div class="grid max-w-2xl gap-4">
   <FileDropzone

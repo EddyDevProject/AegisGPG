@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type Simulation } from "d3-force";
   import { select } from "d3-selection";
@@ -50,7 +51,10 @@
         .force("collide", forceCollide(34))
         .force("x", forceX(0).strength(0.04))
         .force("y", forceY(0).strength(0.04))
-        .on("tick", () => (layout = { nodes, links }));
+        .stop();
+      // Settle the layout up front instead of animating it: the timer-driven ticks can stall in the webview,
+      // leaving every node stacked on its starting position.
+      sim.tick(300);
       layout = { nodes, links };
     } catch (e) {
       toast("error", errorMessage(e));
@@ -73,7 +77,7 @@
 </script>
 
 <div class="mb-4 flex items-center justify-between">
-  <h2 class="text-lg font-semibold">Trust Graph</h2>
+  <h2 class="flex items-center gap-2 text-lg font-semibold">Trust Graph <InfoTip text="Web of trust: each key is a node and each arrow means one key has certified (signed) another. Larger nodes are yours. Scroll to zoom, drag to pan, click a key to open it." /></h2>
   <div class="flex gap-2">
     <button class={btn.outline} onclick={reset}>Reset view</button>
     <button class={btn.outline} disabled={loading} onclick={load}>Reload</button>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import InfoTip from "../components/InfoTip.svelte";
   import { onMount } from "svelte";
   import { api } from "../api";
   import RecipientSelect from "../components/RecipientSelect.svelte";
@@ -55,7 +56,7 @@
   }
 </script>
 
-<h2 class="mb-4 text-lg font-semibold">Quick Text</h2>
+<h2 class="mb-4 flex items-center gap-2 text-lg font-semibold">Quick Text <InfoTip text="Encrypt or decrypt short messages without files. The result is ASCII armor text you can paste into any chat or email." /></h2>
 
 <div class="grid max-w-3xl gap-4">
   <div class="inline-flex w-fit rounded-md border border-zinc-300 p-0.5 dark:border-zinc-700" role="tablist">
@@ -72,7 +73,7 @@
     <div><span class={label}>Recipients</span><RecipientSelect bind:selected={recipients} /></div>
     <label class="flex items-center gap-2 text-sm">
       <input type="checkbox" checked={prefs.encryptToSelf} onchange={(e) => setEncryptToSelf(e.currentTarget.checked)} />
-      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span>
+      Also encrypt to myself <span class="text-xs text-zinc-500">(so I can decrypt it later)</span> <InfoTip text="Adds your own key to the recipients. Without it, you could not read the message you just encrypted for someone else." />
     </label>
   {/if}
 
