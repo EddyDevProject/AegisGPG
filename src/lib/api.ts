@@ -66,6 +66,7 @@ export const api = {
   saveTeam: (name: string, members: string[], id?: string) => invoke<Team>("save_team", { id, name, members }),
   deleteTeam: (id: string) => invoke<void>("delete_team", { id }),
 
+  copySensitive: (text: string, seconds: number) => invoke<void>("copy_sensitive", { text, seconds }),
   setPassphraseTtl: (seconds: number) => invoke<void>("set_passphrase_ttl", { seconds }),
   clearPassphraseCache: () => invoke<void>("clear_passphrase_cache"),
 

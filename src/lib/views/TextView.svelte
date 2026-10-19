@@ -4,7 +4,7 @@
   import { api } from "../api";
   import RecipientSelect from "../components/RecipientSelect.svelte";
   import SignatureBanner from "../components/SignatureBanner.svelte";
-  import { errorMessage, prefs, refreshKeys, setEncryptToSelf, toast, withPassphrase, withSelf } from "../stores.svelte";
+  import { copySecret, errorMessage, prefs, refreshKeys, setEncryptToSelf, toast, withPassphrase, withSelf } from "../stores.svelte";
   import { btn, input, label } from "../ui";
   import type { SignatureStatus } from "../types";
 
@@ -26,6 +26,8 @@
   }
 
   async function copy() {
+    // Decrypted text is plaintext, so it is wiped from the clipboard later.
+    if (mode === "decrypt") return copySecret(output, "Decrypted text copied");
     await navigator.clipboard.writeText(output);
     toast("success", "Copied to clipboard");
   }

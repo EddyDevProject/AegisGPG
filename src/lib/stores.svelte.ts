@@ -172,7 +172,33 @@ export const prefs = $state({
   avatars: pref("avatars", true),
   encryptToSelf: pref("encryptToSelf", true),
   rememberPassphrase: pref("rememberPassphrase", true),
+  clearClipboard: pref("clearClipboard", true),
 });
+
+/** Seconds a copied secret (decrypted text, secret key) stays on the clipboard. */
+const CLIPBOARD_CLEAR = 30;
+
+export function setClearClipboard(on: boolean) {
+  prefs.clearClipboard = on;
+  try {
+    localStorage.setItem("clearClipboard", on ? "1" : "0");
+  } catch {}
+}
+
+/** Copies something secret; the clipboard is wiped after a delay unless that is turned off. */
+export async function copySecret(text: string, what = "Copied") {
+  try {
+    if (prefs.clearClipboard) {
+      await api.copySensitive(text, CLIPBOARD_CLEAR);
+      toast("success", `${what} to clipboard, cleared in ${CLIPBOARD_CLEAR}s`);
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast("success", `${what} to clipboard`);
+    }
+  } catch {
+    toast("error", "Clipboard unavailable");
+  }
+}
 
 /** Seconds the backend keeps a typed passphrase in memory. */
 const PASSPHRASE_TTL = 5 * 60;

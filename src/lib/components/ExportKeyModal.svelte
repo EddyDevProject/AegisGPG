@@ -2,7 +2,7 @@
   import { save } from "@tauri-apps/plugin-dialog";
   import Modal from "./Modal.svelte";
   import { api } from "../api";
-  import { errorMessage, keyLabel, toast } from "../stores.svelte";
+  import { copySecret, errorMessage, keyLabel, toast } from "../stores.svelte";
   import { btn, input } from "../ui";
   import type { KeyInfo } from "../types";
 
@@ -19,8 +19,12 @@
     busy = true;
     try {
       const armored = await api.exportKey(key.fingerprint, secret, pass());
-      await navigator.clipboard.writeText(armored);
-      toast("success", `${secret ? "Secret" : "Public"} key copied to clipboard`);
+      if (secret) {
+        await copySecret(armored, "Secret key copied");
+      } else {
+        await navigator.clipboard.writeText(armored);
+        toast("success", "Public key copied to clipboard");
+      }
       onclose();
     } catch (e) {
       toast("error", errorMessage(e));

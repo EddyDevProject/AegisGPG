@@ -1,3 +1,4 @@
+mod clipboard;
 mod commands;
 mod email;
 mod gpg;
@@ -65,6 +66,7 @@ pub fn run() {
             commands::list_teams,
             commands::save_team,
             commands::delete_team,
+            clipboard::copy_sensitive,
             commands::set_passphrase_ttl,
             commands::clear_passphrase_cache,
             email::send_via_default_mail_client,

@@ -35,6 +35,8 @@ sequoia-openpgp = { version = "1.21", default-features = false, features = [
 ] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# Text-only clipboard access, used to wipe copied secrets after a delay.
+arboard = { version = "3", default-features = false, features = ["wayland-data-control"] }
 
 [profile.release]
 lto = true
