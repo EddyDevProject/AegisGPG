@@ -274,7 +274,7 @@ mod vault_tests {
         let dir = tmp("vault");
         let vault = MemVault::default();
         let store = KeyStore::open_with(dir.clone(), Box::new(vault.clone())).unwrap();
-        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let (cert, _) = CertBuilder::general_purpose(Some("a@b.c")).generate().unwrap();
         let fp = cert.fingerprint().to_hex();
         store.put(cert).unwrap();
 
@@ -292,7 +292,7 @@ mod vault_tests {
     #[test]
     fn existing_file_is_migrated_on_open() {
         let dir = tmp("migrate");
-        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let (cert, _) = CertBuilder::general_purpose(Some("a@b.c")).generate().unwrap();
         let fp = cert.fingerprint().to_hex();
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join(format!("{fp}.asc")), cert.as_tsk().armored().to_vec().unwrap()).unwrap();
@@ -307,7 +307,7 @@ mod vault_tests {
     fn unavailable_vault_keeps_secret_in_file() {
         let dir = tmp("fallback");
         let store = KeyStore::open_with(dir.clone(), Box::new(FailVault)).unwrap();
-        let (cert, _) = CertBuilder::general_purpose(None, Some("a@b.c")).generate().unwrap();
+        let (cert, _) = CertBuilder::general_purpose(Some("a@b.c")).generate().unwrap();
         let fp = cert.fingerprint().to_hex();
         store.put(cert).unwrap();
         assert!(Cert::from_file(dir.join(format!("{fp}.asc"))).unwrap().is_tsk());

@@ -15,7 +15,6 @@ use openpgp::parse::Parse;
 use openpgp::policy::{Policy, StandardPolicy};
 use openpgp::serialize::stream::*;
 use openpgp::types::SymmetricAlgorithm;
-use openpgp::{Fingerprint, KeyID};
 use serde::Serialize;
 use sequoia_openpgp as openpgp;
 use zeroize::Zeroizing;
@@ -71,12 +70,12 @@ pub fn encrypt<R: Read, W: Write + Send + Sync>(
             }
             keys.extend(found);
         }
-        message = Encryptor2::for_recipients(message, keys).build()?;
+        message = Encryptor::for_recipients(message, keys).build()?;
     }
 
     if let Some(cert) = opts.signer {
         let keypair = signing_keypair(cert, &policy, opts.passphrase)?;
-        message = Signer::new(message, keypair).build()?;
+        message = Signer::new(message, keypair)?.build()?;
     }
 
     let mut message = LiteralWriter::new(message).build()?;
@@ -169,6 +168,8 @@ impl VerificationHelper for Helper {
                                 fingerprint: sig.get_issuers().first().map(|h| h.to_hex()),
                             }
                         }
+                        // The enum is non-exhaustive: an unknown failure is never "valid".
+                        Err(_) => SignatureStatus::Invalid { fingerprint: None },
                     });
                 }
             }
@@ -178,22 +179,20 @@ impl VerificationHelper for Helper {
 }
 
 impl DecryptionHelper for Helper {
-    fn decrypt<D>(
+    fn decrypt(
         &mut self,
         pkesks: &[PKESK],
         _skesks: &[SKESK],
         sym_algo: Option<SymmetricAlgorithm>,
-        mut decrypt: D,
-    ) -> openpgp::Result<Option<Fingerprint>>
-    where
-        D: FnMut(SymmetricAlgorithm, &SessionKey) -> bool,
-    {
+        decrypt: &mut dyn FnMut(Option<SymmetricAlgorithm>, &SessionKey) -> bool,
+    ) -> openpgp::Result<Option<Cert>> {
         let policy = StandardPolicy::new();
         let mut needs_passphrase = false;
         let mut wrong_passphrase = false;
 
         for pkesk in pkesks {
-            let wanted: &KeyID = pkesk.recipient();
+            // `None` is a wildcard recipient: try every key.
+            let wanted = pkesk.recipient();
             for cert in &self.certs {
                 for ka in cert
                     .keys()
@@ -202,8 +201,10 @@ impl DecryptionHelper for Helper {
                     .for_transport_encryption()
                     .for_storage_encryption()
                 {
-                    if !wanted.is_wildcard() && *wanted != ka.key().keyid() {
-                        continue;
+                    if let Some(w) = &wanted {
+                        if !w.aliases(&ka.key().key_handle()) {
+                            continue;
+                        }
                     }
                     let mut key = ka.key().clone();
                     let mut typed: Option<Unlocked> = None;
@@ -237,7 +238,7 @@ impl DecryptionHelper for Helper {
                     if let Some((algo, sk)) = pkesk.decrypt(&mut pair, sym_algo) {
                         if decrypt(algo, &sk) {
                             *self.unlocked.lock().unwrap() = typed;
-                            return Ok(Some(ka.cert().fingerprint()));
+                            return Ok(Some(cert.clone()));
                         }
                     }
                 }

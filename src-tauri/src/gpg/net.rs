@@ -138,7 +138,7 @@ fn wkd_urls(email: &str) -> Result<Vec<Url>> {
 fn has_email(cert: &Cert, email: &str) -> bool {
     cert.userids().any(|u| {
         u.userid()
-            .email2()
+            .email()
             .ok()
             .flatten()
             .is_some_and(|e| e.eq_ignore_ascii_case(email.trim()))

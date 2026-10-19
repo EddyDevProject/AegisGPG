@@ -71,5 +71,5 @@ pub fn certify(
     if packets.is_empty() {
         return Err(GpgError::InvalidInput("Select at least one user ID to certify".into()));
     }
-    Ok(target.clone().insert_packets(packets)?)
+    Ok(target.clone().insert_packets(packets)?.0)
 }

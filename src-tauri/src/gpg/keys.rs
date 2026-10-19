@@ -108,9 +108,9 @@ pub fn info(cert: &Cert, ownertrust: Trust, validity: Trust) -> KeyInfo {
         .map(|u| String::from_utf8_lossy(u.userid().value()).into_owned())
         .collect();
     let first = cert.userids().next();
-    let name = first.as_ref().and_then(|u| u.userid().name2().ok().flatten().map(|s| s.to_string()));
-    let comment = first.as_ref().and_then(|u| u.userid().comment2().ok().flatten().map(|s| s.to_string()));
-    let email = first.as_ref().and_then(|u| u.userid().email2().ok().flatten().map(|s| s.to_string()));
+    let name = first.as_ref().and_then(|u| u.userid().name().ok().flatten().map(|s| s.to_string()));
+    let comment = first.as_ref().and_then(|u| u.userid().comment().ok().flatten().map(|s| s.to_string()));
+    let email = first.as_ref().and_then(|u| u.userid().email().ok().flatten().map(|s| s.to_string()));
 
     let valid = cert.with_policy(&policy, None).ok();
     let expires = valid

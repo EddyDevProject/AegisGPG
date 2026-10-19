@@ -184,8 +184,8 @@ pub fn graph(
         .map(|c| {
             let fp = c.fingerprint().to_hex();
             let first = c.userids().next();
-            let email = first.as_ref().and_then(|u| u.userid().email2().ok().flatten().map(|s| s.to_string()));
-            let name = first.as_ref().and_then(|u| u.userid().name2().ok().flatten().map(|s| s.to_string()));
+            let email = first.as_ref().and_then(|u| u.userid().email().ok().flatten().map(|s| s.to_string()));
+            let name = first.as_ref().and_then(|u| u.userid().name().ok().flatten().map(|s| s.to_string()));
             GraphNode {
                 label: name.or_else(|| email.clone()).unwrap_or_else(|| fp[fp.len() - 8..].to_string()),
                 email,
@@ -279,7 +279,7 @@ mod tests {
             .userids()
             .flat_map(|u| u.certifications().cloned().collect::<Vec<_>>())
             .collect();
-        let forged = public(&mallory).insert_packets(sig_packets).unwrap();
+        let forged = public(&mallory).insert_packets(sig_packets).unwrap().0;
         assert!(certifications(&[me, forged]).is_empty());
     }
 }

@@ -1,0 +1,41 @@
+name: Security audit
+
+on:
+  pull_request:
+    paths:
+      - "src-tauri/Cargo.toml"
+      - "src-tauri/Cargo.lock"
+      - "src-tauri/deny.toml"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/audit.yml"
+  schedule:
+    # New advisories appear without any change to this repo.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check
+          arguments: --all-features
+
+  npm:
+    name: npm audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Only what ships to users; build-time tooling is not part of the app.
+      - run: npm audit --omit=dev --audit-level=high
