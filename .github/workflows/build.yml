@@ -1,19 +1,21 @@
 name: Build & Release
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish a GitHub Release for the version in tauri.conf.json
+        type: boolean
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Decides whether this run publishes a GitHub Release: on a v* tag push, or
-  # on a push to main whose version (tauri.conf.json) has no tag yet.
+  # Publishes a GitHub Release only when the workflow is run manually with
+  # "release" enabled. Tag = v<version from tauri.conf.json>.
   meta:
     runs-on: ubuntu-latest
     outputs:
@@ -25,17 +27,11 @@ jobs:
         run: |
           version=$(jq -r .version src-tauri/tauri.conf.json)
           release=false
-          tag="v$version"
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch && "${{ inputs.release }}" == true ]]; then
             release=true
-            tag="${GITHUB_REF#refs/tags/}"
-          elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" == push ]]; then
-            if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; then
-              release=true
-            fi
           fi
           echo "release=$release" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
   build:
     name: ${{ matrix.name }}
@@ -101,7 +97,7 @@ jobs:
         working-directory: src-tauri
         run: cargo test --locked
 
-      # New version: build and attach installers to a published GitHub Release
+      # Manual run: build and attach installers to a published GitHub Release
       # (shown in the repo sidebar). The tag is created if it does not exist.
       - name: Build and publish release
         if: needs.meta.outputs.release == 'true'
