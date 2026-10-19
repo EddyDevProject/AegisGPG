@@ -1,8 +1,9 @@
 <script lang="ts">
   // Lucide icons (https://lucide.dev, ISC license), inlined to avoid a dependency.
-  export type IconName = "key" | "users" | "globe" | "graph" | "lock" | "unlock" | "text" | "refresh" | "sun" | "moon";
+  export type IconName = "key" | "users" | "globe" | "graph" | "lock" | "unlock" | "text" | "refresh" | "sun" | "moon" | "power";
 
   const paths: Record<IconName, string> = {
+    power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
     key: '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
     users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',

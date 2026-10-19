@@ -69,6 +69,7 @@ pub fn run() {
             clipboard::copy_sensitive,
             commands::set_passphrase_ttl,
             commands::clear_passphrase_cache,
+            commands::panic_wipe,
             email::send_via_default_mail_client,
         ])
         .run(tauri::generate_context!())

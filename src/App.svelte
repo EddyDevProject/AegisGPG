@@ -12,6 +12,7 @@
   import TeamsView from "./lib/views/TeamsView.svelte";
   import TextView from "./lib/views/TextView.svelte";
   import { onMount } from "svelte";
+  import { api } from "./lib/api";
   import { applyTheme, checkForUpdates, installUpdate, theme, toggleTheme, updater } from "./lib/stores.svelte";
 
   type Tab = "keys" | "teams" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
@@ -30,11 +31,23 @@
 
   $effect(applyTheme);
 
+  /** Forgets remembered passphrases, empties the clipboard and quits. */
+  const panic = () => void api.panicWipe();
+
+  function onKeydown(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "x") {
+      e.preventDefault();
+      panic();
+    }
+  }
+
   // Silent check at startup (not in `tauri dev`, where there is nothing to update).
   onMount(() => {
     if (!import.meta.env.DEV) checkForUpdates();
   });
 </script>
+
+<svelte:window onkeydown={onKeydown} />
 
 <div class="flex h-full">
   <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-zinc-200 p-3 dark:border-zinc-800" aria-label="Main">
@@ -78,6 +91,13 @@
       onclick={toggleTheme}
     >
       <Icon name={theme.mode === "dark" ? "sun" : "moon"} class="size-[18px]" />{theme.mode === "dark" ? "Light mode" : "Dark mode"}
+    </button>
+    <button
+      class="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+      title="Forgets remembered passphrases, empties the clipboard and quits (Ctrl/Cmd+Shift+X)"
+      onclick={panic}
+    >
+      <Icon name="power" class="size-[18px]" />Wipe &amp; quit
     </button>
     <footer class="mt-2 px-2 pt-3 text-center text-xs text-zinc-500 border-t border-zinc-200 dark:border-zinc-800">
       Made with <span class="text-red-500" aria-label="love">♥</span> by Edoardo Bavaro

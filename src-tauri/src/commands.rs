@@ -710,6 +710,15 @@ pub fn set_passphrase_ttl(cache: State<'_, PassphraseCache>, seconds: u64) {
     cache.set_ttl(seconds);
 }
 
+/// Panic button: forgets every remembered passphrase, empties the clipboard and quits.
+/// Nothing else secret is kept in memory between operations.
+#[tauri::command]
+pub fn panic_wipe(app: AppHandle, cache: State<'_, PassphraseCache>) {
+    cache.clear();
+    crate::clipboard::clear_now();
+    app.exit(0);
+}
+
 #[tauri::command]
 pub fn clear_passphrase_cache(cache: State<'_, PassphraseCache>) {
     cache.clear();

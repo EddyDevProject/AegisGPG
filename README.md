@@ -60,6 +60,8 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - **Secrets in memory** (passphrases, decrypted key material) are held in zeroizing buffers and wiped on drop
 - **Least privilege**: the webview gets *no* filesystem access. The Rust side opens only files you picked in a dialog or dropped on the window. The Tauri capability list contains just the dialog permissions, and a strict CSP is set
 - **Untrusted downloads**: anything fetched from a keyserver/WKD is stripped of secret material, size-capped (5 MB), HTTPS-only, bound to timeouts, and checked against what you asked for
+- **Wipe & quit**: the sidebar button (or Ctrl/Cmd+Shift+X) forgets remembered passphrases, empties the clipboard and exits. Copied decrypted text and secret keys are also cleared from the clipboard after 30 seconds
+- **Supply chain**: `cargo-deny` and `npm audit` run on dependency changes and weekly in CI (see [`audit.yml`](.github/workflows/audit.yml) and [`deny.toml`](src-tauri/deny.toml)). Security reports: see [SECURITY.md](SECURITY.md)
 - **Typed errors** end to end: Rust enum → `{ code, message }` → friendly UI message
 - **OS credential store**: secret keys without a passphrase are kept in the macOS Keychain, Windows Credential Manager or Linux Secret Service, and only the public part stays on disk. Existing keys are migrated on first launch. If the store is unavailable (or the key is too large for it, e.g. RSA 4096 on Windows) the key stays in its file, so **set a passphrase** (the app warns you)
 

@@ -13,6 +13,13 @@ use zeroize::Zeroizing;
 /// Bumped on every copy so an older timer never wipes a newer copy early.
 static GENERATION: AtomicU64 = AtomicU64::new(0);
 
+/// Empties the clipboard whatever it holds (used by the panic wipe).
+pub fn clear_now() {
+    if let Ok(mut clipboard) = Clipboard::new() {
+        let _ = clipboard.clear();
+    }
+}
+
 /// Puts `text` on the clipboard and clears it again after `seconds`.
 /// With `seconds == 0` the text is copied and left there.
 #[tauri::command]

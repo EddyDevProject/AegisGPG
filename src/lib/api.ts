@@ -68,6 +68,7 @@ export const api = {
 
   copySensitive: (text: string, seconds: number) => invoke<void>("copy_sensitive", { text, seconds }),
   setPassphraseTtl: (seconds: number) => invoke<void>("set_passphrase_ttl", { seconds }),
+  panicWipe: () => invoke<void>("panic_wipe"),
   clearPassphraseCache: () => invoke<void>("clear_passphrase_cache"),
 
   decryptText: (armored: string, passphrase?: string) =>
