@@ -304,6 +304,34 @@ mod vault_tests {
     }
 
     #[test]
+    fn backup_restores_into_a_fresh_and_into_the_same_store() {
+        use crate::gpg::backup;
+        let (dir_a, dir_b) = (tmp("bk-a"), tmp("bk-b"));
+        let a = KeyStore::open_with(dir_a.clone(), Box::new(MemVault::default())).unwrap();
+        let (plain, _) = CertBuilder::general_purpose(Some("a@b.c")).generate().unwrap();
+        let (other, _) = CertBuilder::general_purpose(Some("c@d.e")).generate().unwrap();
+        a.put(plain.clone()).unwrap();
+        a.put(other.strip_secret_key_material()).unwrap();
+
+        let data = backup::create(&a.all().unwrap(), "a long backup phrase").unwrap();
+        let restored = backup::restore(&data, "a long backup phrase").unwrap();
+        assert_eq!(restored.len(), 2);
+
+        let b = KeyStore::open_with(dir_b.clone(), Box::new(MemVault::default())).unwrap();
+        for c in &restored {
+            b.put(c.clone()).unwrap();
+        }
+        assert!(b.get(&plain.fingerprint().to_hex()).unwrap().is_tsk());
+        // Restoring again over existing keys must work too.
+        for c in &restored {
+            a.put(c.clone()).unwrap();
+        }
+        assert!(a.get(&plain.fingerprint().to_hex()).unwrap().is_tsk());
+        fs::remove_dir_all(dir_a).unwrap();
+        fs::remove_dir_all(dir_b).unwrap();
+    }
+
+    #[test]
     fn unavailable_vault_keeps_secret_in_file() {
         let dir = tmp("fallback");
         let store = KeyStore::open_with(dir.clone(), Box::new(FailVault)).unwrap();
