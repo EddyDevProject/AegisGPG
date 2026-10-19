@@ -84,6 +84,35 @@ pub fn encrypt<R: Read, W: Write + Send + Sync>(
     Ok(())
 }
 
+/// Signs `text` as a cleartext message (readable as is, with the signature below it).
+pub fn sign_cleartext(text: &[u8], signer: &Cert, passphrase: Option<&str>) -> Result<Vec<u8>> {
+    let policy = StandardPolicy::new();
+    let keypair = signing_keypair(signer, &policy, passphrase)?;
+    let mut out = Vec::new();
+    let mut message = Signer::new(Message::new(&mut out), keypair)?.cleartext().build()?;
+    message.write_all(text)?;
+    message.finalize()?;
+    Ok(out)
+}
+
+/// Checks a cleartext-signed message and returns its text with the verdicts.
+pub fn verify_cleartext(input: &[u8], certs: Vec<Cert>) -> Result<(Vec<u8>, Vec<SignatureStatus>)> {
+    let policy = StandardPolicy::new();
+    let results = Arc::new(Mutex::new(Vec::new()));
+    let helper = Helper {
+        certs,
+        passphrase: None,
+        cached: HashMap::new(),
+        unlocked: Arc::new(Mutex::new(None)),
+        results: results.clone(),
+    };
+    let mut verifier = VerifierBuilder::from_bytes(input)?.with_policy(&policy, None, helper)?;
+    let mut text = Vec::new();
+    io::copy(&mut verifier, &mut text).map_err(|_| GpgError::Corrupted)?;
+    let out = results.lock().unwrap().clone();
+    Ok((text, out))
+}
+
 fn signing_keypair(
     cert: &Cert,
     policy: &dyn Policy,
@@ -354,6 +383,30 @@ mod tests {
         let e = decrypt(Cursor::new(ct), &mut Vec::new(), vec![k], None, stale).unwrap_err();
         assert!(matches!(e, GpgError::PassphraseRequired), "{e:?}");
         assert!(matches!(sigs[..], [SignatureStatus::Valid { .. }]), "{sigs:?}");
+    }
+
+    #[test]
+    fn cleartext_sign_and_verify() {
+        let k = key(Some("hunter2"));
+        let public = k.clone().strip_secret_key_material();
+        let e = sign_cleartext(b"hello\n", &k, None).unwrap_err();
+        assert!(matches!(e, GpgError::PassphraseRequired), "{e:?}");
+        let signed = sign_cleartext(b"hello\n", &k, Some("hunter2")).unwrap();
+        let armored = String::from_utf8_lossy(&signed).into_owned();
+        assert!(armored.contains("BEGIN PGP SIGNED MESSAGE") && armored.contains("hello"));
+
+        let (text, sigs) = verify_cleartext(&signed, vec![public.clone()]).unwrap();
+        assert_eq!(String::from_utf8_lossy(&text).trim(), "hello");
+        assert!(matches!(sigs[..], [SignatureStatus::Valid { .. }]), "{sigs:?}");
+
+        // Tampering with the text must not verify.
+        let forged = armored.replace("hello", "HELLO");
+        let (_, sigs) = verify_cleartext(forged.as_bytes(), vec![public]).unwrap_or_default();
+        assert!(!matches!(sigs[..], [SignatureStatus::Valid { .. }]), "{sigs:?}");
+
+        // Unknown signer.
+        let (_, sigs) = verify_cleartext(&signed, vec![]).unwrap();
+        assert!(matches!(sigs[..], [SignatureStatus::UnknownSigner { .. }]), "{sigs:?}");
     }
 
     #[test]

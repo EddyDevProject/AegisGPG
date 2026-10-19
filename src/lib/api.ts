@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  BackupReport,
   CertLevel,
   GraphData,
   KeyDetail,
@@ -8,6 +9,7 @@ import type {
   QrView,
   RefreshReport,
   RemoteKey,
+  RevokeRequest,
   ServerId,
   Trust,
   UploadReport,
@@ -67,6 +69,17 @@ export const api = {
   deleteTeam: (id: string) => invoke<void>("delete_team", { id }),
 
   copySensitive: (text: string, seconds: number) => invoke<void>("copy_sensitive", { text, seconds }),
+  signText: (text: string, signer: string, passphrase?: string) =>
+    invoke<string>("sign_text", { text, signer, passphrase }),
+  verifyText: (signed: string) => invoke<TextDecryptResult>("verify_text", { signed }),
+
+  revocationCertificate: (request: RevokeRequest) => invoke<string>("revocation_certificate", { request }),
+  saveRevocationCertificate: (request: RevokeRequest, path: string) =>
+    invoke<void>("save_revocation_certificate", { request, path }),
+  revokeKey: (request: RevokeRequest) => invoke<KeyInfo>("revoke_key", { request }),
+  createBackup: (path: string, passphrase: string) => invoke<BackupReport>("create_backup", { path, passphrase }),
+  restoreBackup: (path: string, passphrase: string) => invoke<BackupReport>("restore_backup", { path, passphrase }),
+
   setPassphraseTtl: (seconds: number) => invoke<void>("set_passphrase_ttl", { seconds }),
   panicWipe: () => invoke<void>("panic_wipe"),
   clearPassphraseCache: () => invoke<void>("clear_passphrase_cache"),

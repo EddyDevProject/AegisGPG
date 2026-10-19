@@ -162,3 +162,17 @@ export interface Team {
   /** Key fingerprints; may reference keys that were deleted since */
   members: string[];
 }
+
+export type RevokeReason = "compromised" | "superseded" | "retired" | "unspecified";
+
+export interface RevokeRequest {
+  fingerprint: string;
+  reason: RevokeReason;
+  message?: string;
+  passphrase?: string;
+}
+
+export interface BackupReport {
+  keys: number;
+  secret_keys: number;
+}

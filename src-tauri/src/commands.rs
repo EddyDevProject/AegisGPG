@@ -7,8 +7,11 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use tauri::{async_runtime::spawn_blocking, AppHandle, Emitter, State};
+use sequoia_openpgp::cert as openpgp_cert;
 use zeroize::Zeroizing;
 
+use crate::gpg::backup;
+use crate::gpg::revoke::{self, Reason};
 use crate::gpg::crypto::{self, EncryptOptions, SignatureStatus, Unlocked};
 use crate::gpg::certify::{self, Level};
 use crate::gpg::keys::{self, GenerateKeyRequest, KeyInfo, SubkeyInfo};
@@ -453,6 +456,36 @@ pub async fn decrypt_text(
     Ok(TextDecryptResult { text, signatures })
 }
 
+#[tauri::command]
+pub async fn sign_text(
+    store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
+    text: String,
+    signer: String,
+    passphrase: Option<String>,
+) -> Result<String> {
+    let text = Zeroizing::new(text);
+    let cert = store.get(&signer)?;
+    let unlock = Unlock::new(&cache, Some(&signer), passphrase);
+    let result = crypto::sign_cleartext(text.as_bytes(), &cert, unlock.as_str());
+    let signed = unlock.settle(&cache, Some(&signer), result)?;
+    String::from_utf8(signed).map_err(|_| GpgError::Other("Signing produced invalid text".into()))
+}
+
+#[derive(Serialize)]
+pub struct VerifyResult {
+    text: String,
+    signatures: Vec<SignatureStatus>,
+}
+
+#[tauri::command]
+pub fn verify_text(store: State<'_, KeyStore>, signed: String) -> Result<VerifyResult> {
+    let (text, signatures) = crypto::verify_cleartext(signed.as_bytes(), store.all()?)?;
+    let text = String::from_utf8(text)
+        .map_err(|_| GpgError::InvalidInput("The signed content is not valid UTF-8 text".into()))?;
+    Ok(VerifyResult { text, signatures })
+}
+
 // ------------------------------------------------- contacts & trust ----
 
 #[derive(Serialize)]
@@ -518,6 +551,101 @@ pub async fn certify_key(
 
     let cert = store.put(certified)?;
     describe_one(&store, &cert.fingerprint().to_hex())
+}
+
+// ----------------------------------------------- revocation & backup ----
+
+#[derive(Deserialize)]
+pub struct RevokeRequest {
+    fingerprint: String,
+    reason: Reason,
+    message: Option<String>,
+    passphrase: Option<String>,
+}
+
+/// The key with a revocation signature added, signed with its own secret key.
+fn revoked_cert(
+    store: &KeyStore,
+    cache: &PassphraseCache,
+    request: RevokeRequest,
+) -> Result<openpgp_cert::Cert> {
+    let cert = store.get(&request.fingerprint)?;
+    let unlock = Unlock::new(cache, Some(&request.fingerprint), request.passphrase);
+    let result = revoke::revoke(&cert, request.reason, request.message.as_deref().unwrap_or(""), unlock.as_str());
+    unlock.settle(cache, Some(&request.fingerprint), result)
+}
+
+/// A public key carrying its revocation: safe to keep anywhere and to publish.
+/// Importing it later (here or elsewhere) revokes the key. Changes nothing now.
+fn revocation_armor(cert: openpgp_cert::Cert) -> Result<Vec<u8>> {
+    use sequoia_openpgp::serialize::SerializeInto;
+    Ok(cert.strip_secret_key_material().armored().to_vec()?)
+}
+
+#[tauri::command]
+pub fn revocation_certificate(
+    store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
+    request: RevokeRequest,
+) -> Result<String> {
+    let bytes = revocation_armor(revoked_cert(&store, &cache, request)?)?;
+    String::from_utf8(bytes).map_err(|_| GpgError::Other("Revocation produced invalid text".into()))
+}
+
+#[tauri::command]
+pub fn save_revocation_certificate(
+    store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
+    request: RevokeRequest,
+    path: String,
+) -> Result<()> {
+    fs::write(path, revocation_armor(revoked_cert(&store, &cache, request)?)?)?;
+    Ok(())
+}
+
+/// Revokes the key in this keyring. Publish it afterwards so others learn of it.
+#[tauri::command]
+pub fn revoke_key(
+    store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
+    request: RevokeRequest,
+) -> Result<KeyInfo> {
+    let fingerprint = request.fingerprint.clone();
+    let cert = revoked_cert(&store, &cache, request)?;
+    store.put(cert)?;
+    describe_one(&store, &fingerprint)
+}
+
+#[derive(Serialize)]
+pub struct BackupReport {
+    keys: usize,
+    secret_keys: usize,
+}
+
+fn report(certs: &[openpgp_cert::Cert]) -> BackupReport {
+    BackupReport { keys: certs.len(), secret_keys: certs.iter().filter(|c| c.is_tsk()).count() }
+}
+
+#[tauri::command]
+pub fn create_backup(store: State<'_, KeyStore>, path: String, passphrase: String) -> Result<BackupReport> {
+    let passphrase = Zeroizing::new(passphrase);
+    let certs = store.all()?;
+    let data = backup::create(&certs, &passphrase)?;
+    crate::gpg::store::write_private(Path::new(&path), &data)?;
+    Ok(report(&certs))
+}
+
+#[tauri::command]
+pub fn restore_backup(store: State<'_, KeyStore>, path: String, passphrase: String) -> Result<BackupReport> {
+    let passphrase = Zeroizing::new(passphrase);
+    if fs::metadata(&path)?.len() > 64 * 1024 * 1024 {
+        return Err(GpgError::InvalidInput("File is too large to be a backup".into()));
+    }
+    let certs = backup::restore(&fs::read(path)?, &passphrase)?;
+    for cert in &certs {
+        store.put(cert.clone())?;
+    }
+    Ok(report(&certs))
 }
 
 // ------------------------------------------------------ network ----

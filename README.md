@@ -33,6 +33,8 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - Import from `.asc` / `.pub` / `.key` files, drag & drop, or pasted ASCII armor
 - Export public keys, or secret keys behind a passphrase prompt, to the clipboard or a file
 - Delete with confirmation
+- **Backup & restore**: the whole keyring (secret keys included) in one file encrypted with a passphrase you choose, and a restore that merges it back
+- **Revocation certificates**: save one for each of your keys while you still can, or revoke a key right away
 
 ### Encrypt, sign, decrypt
 - Drag & drop any file; encrypt to one or many recipients and/or sign with your key
@@ -40,7 +42,7 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - **Send by mail**: one click opens your default mail client (Apple Mail, Outlook, Thunderbird) with a new draft and the encrypted file attached (macOS; Windows via Simple MAPI; Linux via `xdg-email`)
 - **Streaming I/O** in a background thread: multi-gigabyte files don't load into RAM or freeze the UI, and you get a live progress bar
 - Decrypt with a result card showing where the file went and a signature verdict: **valid**, **invalid** or **unknown signer**
-- Quick text tool to encrypt/decrypt clipboard text without touching the disk
+- Quick text tool to encrypt/decrypt clipboard text without touching the disk, plus **cleartext signing and verification** (readable message with a signature below it)
 
 ### Contacts & Web of Trust
 - Contact book with avatars (Libravatar → Gravatar → generated initials; can be switched off)
@@ -137,10 +139,10 @@ src-tauri/src/
 ## Roadmap
 
 - [ ] Camera QR scanner
-- [ ] Signing from the Quick Text tool
+- [x] Signing from the Quick Text tool
 - [ ] Code signing and notarization for macOS and Windows
 - [x] Linux, Windows and macOS (arm64 + Intel) builds in CI
-- [ ] Key backup/restore wizard and revocation certificates
+- [x] Key backup/restore wizard and revocation certificates
 - [ ] Localization (Italian first)
 
 ## License

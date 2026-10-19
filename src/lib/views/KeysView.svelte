@@ -8,13 +8,16 @@
   import ImportKeyModal from "../components/ImportKeyModal.svelte";
   import QrModal from "../components/QrModal.svelte";
   import ExportKeyModal from "../components/ExportKeyModal.svelte";
+  import RevokeModal from "../components/RevokeModal.svelte";
+  import BackupModal from "../components/BackupModal.svelte";
   import { askConfirm, errorMessage, fmtDate, keyLabel, keyring, prefs, refreshKeys, setAvatars, setClearClipboard, setRememberPassphrase, shortFp, toast, ui } from "../stores.svelte";
   import { btn, card } from "../ui";
   import type { KeyInfo } from "../types";
 
-  let modal = $state<"generate" | "import" | null>(null);
+  let modal = $state<"generate" | "import" | "backup" | null>(null);
   let exporting = $state<KeyInfo | null>(null);
   let qrFor = $state<KeyInfo | null>(null);
+  let revoking = $state<KeyInfo | null>(null);
 
   const mine = $derived(keyring.list.filter((k) => k.has_secret));
   const others = $derived(keyring.list.filter((k) => !k.has_secret));
@@ -52,6 +55,7 @@
       <input type="checkbox" checked={prefs.clearClipboard} onchange={(e) => setClearClipboard(e.currentTarget.checked)} />
       Clear clipboard (30 s)
     </label>
+    <button class={btn.outline} onclick={() => (modal = "backup")}>Backup</button>
     <button class={btn.outline} onclick={() => (modal = "import")}>Import</button>
     <button class={btn.primary} onclick={() => (modal = "generate")}>Generate key</button>
   </div>
@@ -77,6 +81,7 @@
           <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM20 14v3M14 20h3M20 20v1"/></svg>
         </button>
         <button class={btn.ghost} onclick={() => (exporting = k)}>Export</button>
+        {#if k.has_secret && !k.revoked}<button class={btn.ghost} onclick={() => (revoking = k)}>Revoke</button>{/if}
         <button class="{btn.ghost} text-red-600 dark:text-red-400" onclick={() => remove(k)}>Delete</button>
       </div>
     </li>
@@ -103,5 +108,7 @@
 
 {#if modal === "generate"}<GenerateKeyModal onclose={() => (modal = null)} />{/if}
 {#if modal === "import"}<ImportKeyModal onclose={() => (modal = null)} />{/if}
+{#if modal === "backup"}<BackupModal onclose={() => (modal = null)} />{/if}
+{#if revoking}<RevokeModal key={revoking} onclose={() => (revoking = null)} />{/if}
 {#if qrFor}<QrModal key={qrFor} onclose={() => (qrFor = null)} />{/if}
 {#if exporting}<ExportKeyModal key={exporting} onclose={() => (exporting = null)} />{/if}
