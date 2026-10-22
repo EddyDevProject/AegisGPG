@@ -176,3 +176,15 @@ export interface BackupReport {
   keys: number;
   secret_keys: number;
 }
+
+/** A KleyKnox vault on a mounted USB stick (see the kleyknox command-line tool). */
+export interface KleyKnoxStatus {
+  dir: string | null;
+  entries: string[];
+}
+
+export interface KleyKnoxReport {
+  unlocked: string[];
+  imported: string[];
+  mismatched: string[];
+}

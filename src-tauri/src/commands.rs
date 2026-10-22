@@ -15,6 +15,7 @@ use crate::gpg::revoke::{self, Reason};
 use crate::gpg::crypto::{self, EncryptOptions, SignatureStatus, Unlocked};
 use crate::gpg::certify::{self, Level};
 use crate::gpg::keys::{self, GenerateKeyRequest, KeyInfo, SubkeyInfo};
+use crate::gpg::kleyknox;
 use crate::gpg::net::{self, Server, UploadReport};
 use crate::gpg::passphrase_cache::PassphraseCache;
 use crate::gpg::qr;
@@ -850,4 +851,82 @@ pub fn panic_wipe(app: AppHandle, cache: State<'_, PassphraseCache>) {
 #[tauri::command]
 pub fn clear_passphrase_cache(cache: State<'_, PassphraseCache>) {
     cache.clear();
+}
+
+// ------------------------------------------------------------ kleyknox ----
+
+/// Whether a kleyknox vault is mounted, and which GPG keys it holds.
+#[tauri::command]
+pub fn kleyknox_status() -> kleyknox::Status {
+    kleyknox::status()
+}
+
+#[derive(Serialize)]
+pub struct KleyKnoxReport {
+    /// Keys whose passphrase is now remembered.
+    pub unlocked: Vec<String>,
+    /// Keys this keyring lacked, imported from the vault.
+    pub imported: Vec<String>,
+    /// Keys whose passphrase in the vault does not open the copy in this keyring.
+    pub mismatched: Vec<String>,
+}
+
+/// Opens the kleyknox vault with its passphrase and remembers, for `ttl_seconds`,
+/// the passphrase of every key it holds. Keys missing here are imported first.
+#[tauri::command]
+pub async fn kleyknox_unlock(
+    store: State<'_, KeyStore>,
+    cache: State<'_, PassphraseCache>,
+    passphrase: String,
+    ttl_seconds: u64,
+) -> Result<KleyKnoxReport> {
+    let pass = Zeroizing::new(passphrase);
+    if pass.is_empty() {
+        return Err(GpgError::PassphraseRequired);
+    }
+    let dir = kleyknox::locate()
+        .ok_or_else(|| GpgError::NotFound("a kleyknox vault on a mounted drive".into()))?;
+    let entries = spawn_blocking(move || kleyknox::open_all(&dir, &pass))
+        .await
+        .map_err(join_err)??;
+    let ttl = Duration::from_secs(ttl_seconds.clamp(60, 24 * 3600));
+
+    let mut report = KleyKnoxReport { unlocked: Vec::new(), imported: Vec::new(), mismatched: Vec::new() };
+    for entry in entries {
+        let cert = match store.get(&entry.fingerprint) {
+            Ok(cert) if cert.is_tsk() => cert,
+            _ => {
+                let mut imported = None;
+                for cert in keys::parse(entry.secret_armor.as_bytes())? {
+                    if cert.fingerprint().to_hex() == entry.fingerprint {
+                        imported = Some(store.put(cert)?);
+                    }
+                }
+                let cert = imported.ok_or_else(|| {
+                    GpgError::InvalidInput(format!("KleyKnox entry {} does not hold its key", entry.name))
+                })?;
+                report.imported.push(key_label(&cert, &entry.name));
+                cert
+            }
+        };
+        let label = key_label(&cert, &entry.name);
+        match keys::check_passphrase(&cert, &entry.passphrase) {
+            Ok(()) => {
+                if !entry.passphrase.is_empty() {
+                    cache.store_for(&entry.fingerprint, &entry.passphrase, ttl);
+                }
+                report.unlocked.push(label);
+            }
+            Err(GpgError::WrongPassphrase) => report.mismatched.push(label),
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(report)
+}
+
+fn key_label(cert: &openpgp_cert::Cert, fallback: &str) -> String {
+    cert.userids()
+        .next()
+        .map(|u| String::from_utf8_lossy(u.userid().value()).into_owned())
+        .unwrap_or_else(|| fallback.to_owned())
 }

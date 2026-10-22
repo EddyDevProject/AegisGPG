@@ -10,6 +10,8 @@ import type {
   RefreshReport,
   RemoteKey,
   RevokeRequest,
+  KleyKnoxReport,
+  KleyKnoxStatus,
   ServerId,
   Trust,
   UploadReport,
@@ -83,6 +85,9 @@ export const api = {
   setPassphraseTtl: (seconds: number) => invoke<void>("set_passphrase_ttl", { seconds }),
   panicWipe: () => invoke<void>("panic_wipe"),
   clearPassphraseCache: () => invoke<void>("clear_passphrase_cache"),
+  kleyknoxStatus: () => invoke<KleyKnoxStatus>("kleyknox_status"),
+  kleyknoxUnlock: (passphrase: string, ttlSeconds: number) =>
+    invoke<KleyKnoxReport>("kleyknox_unlock", { passphrase, ttlSeconds }),
 
   decryptText: (armored: string, passphrase?: string) =>
     invoke<TextDecryptResult>("decrypt_text", { armored, passphrase }),

@@ -14,6 +14,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+# Reads kleyknox vaults (age, passphrase recipients).
+age = "0.11"
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
@@ -22,6 +24,8 @@ thiserror = "1"
 anyhow = "1"
 zeroize = { version = "1", features = ["derive"] }
 sha1 = "0.10"
+# Feeds sequoia's public CFB decryptor (gpg/gnupg_compat.rs); same version sequoia uses.
+buffered-reader = { version = "1.4", default-features = false }
 qrcode = { version = "0.14", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png"] }
 # rustls: no system OpenSSL needed on any platform.
@@ -32,6 +36,9 @@ sequoia-openpgp = { version = "2.1", default-features = false, features = [
   "crypto-rust",
   "allow-experimental-crypto",
   "allow-variable-time-crypto",
+  # GnuPG compresses with ZLIB by default; without this its messages fail to
+  # decrypt. flate2's default backend is pure Rust, like the rest.
+  "compression-deflate",
 ] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
