@@ -7,6 +7,8 @@ export const btn = {
   ghost: `${base} text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800`,
   outline: `${base} border border-zinc-300 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800`,
   danger: `${base} bg-red-600 text-white hover:bg-red-500`,
+  /** KleyKnox actions, in its own colour. */
+  knox: `${base} bg-knox-ink text-white hover:brightness-110 dark:bg-knox dark:text-zinc-950`,
 };
 
 export const input =

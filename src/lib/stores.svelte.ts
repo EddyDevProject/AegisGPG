@@ -85,13 +85,35 @@ export const passphrasePrompt = $state({
   title: "",
   description: "",
   error: "",
+  /** Open on the KleyKnox form instead of the key's passphrase. */
+  kleyknox: false,
+  /** KleyKnox form only, with no way back to a key passphrase (sidebar button). */
+  kleyknoxOnly: false,
   resolve: null as null | ((v: string | null) => void),
 });
 
-/** Resolves with the passphrase, or null if cancelled. */
-export function askPassphrase(title: string, description = "", error = ""): Promise<string | null> {
+/**
+ * Resolves with the passphrase, or null if cancelled. An empty string means
+ * the keys were unlocked with KleyKnox: retry without one, the backend has it.
+ */
+export function askPassphrase(title: string, description = "", error = "", kleyknox = false): Promise<string | null> {
   return new Promise((resolve) => {
-    Object.assign(passphrasePrompt, { open: true, title, description, error, resolve });
+    Object.assign(passphrasePrompt, { open: true, title, description, error, kleyknox, kleyknoxOnly: false, resolve });
+  });
+}
+
+/** Opens the KleyKnox form on its own; resolves true once keys were unlocked. */
+export function unlockWithKleyKnox(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Object.assign(passphrasePrompt, {
+      open: true,
+      title: "Unlock with KleyKnox",
+      description: "",
+      error: "",
+      kleyknox: true,
+      kleyknoxOnly: true,
+      resolve: (v: string | null) => resolve(v !== null),
+    });
   });
 }
 
@@ -121,6 +143,8 @@ export async function withPassphrase<T>(
 ): Promise<T | null> {
   let pass: string | undefined;
   let error = "";
+  // Offered first at most once: if KleyKnox did not hold this key, ask for its own passphrase.
+  let tryKleyKnox = prefs.kleyknoxByDefault;
   for (;;) {
     try {
       return await run(pass);
@@ -128,9 +152,11 @@ export async function withPassphrase<T>(
       const code = errorCode(e);
       if (code !== "passphrase_required" && code !== "wrong_passphrase") throw e;
       if (code === "wrong_passphrase") error = errorMessage(e);
-      const p = await askPassphrase(title, description, error);
+      if (tryKleyKnox) await refreshKleyKnox();
+      const p = await askPassphrase(title, description, error, tryKleyKnox && kleyknox.dir !== null);
       if (p === null) return null;
-      pass = p;
+      if (p === "") tryKleyKnox = false;
+      pass = p || undefined;
     }
   }
 }
@@ -173,6 +199,7 @@ export const prefs = $state({
   encryptToSelf: pref("encryptToSelf", true),
   rememberPassphrase: pref("rememberPassphrase", true),
   clearClipboard: pref("clearClipboard", true),
+  kleyknoxByDefault: pref("kleyknoxByDefault", true),
 });
 
 /** Seconds a copied secret (decrypted text, secret key) stays on the clipboard. */
@@ -290,4 +317,46 @@ export async function installUpdate() {
     toast("error", `Update failed: ${errorMessage(e)}`);
     updater.status = "available";
   }
+}
+
+// -------------------------------------------------------------- kleyknox ----
+/** The KleyKnox vault on a plugged-in stick, if any; refreshed on demand. */
+export const kleyknox = $state({ dir: null as string | null, entries: [] as string[] });
+
+export async function refreshKleyKnox() {
+  try {
+    Object.assign(kleyknox, await api.kleyknoxStatus());
+  } catch {
+    Object.assign(kleyknox, { dir: null, entries: [] });
+  }
+}
+
+/** Ask for the KleyKnox passphrase instead of a key's own whenever the stick is plugged in. */
+export function setKleyKnoxByDefault(on: boolean) {
+  prefs.kleyknoxByDefault = on;
+  try {
+    localStorage.setItem("kleyknoxByDefault", on ? "1" : "0");
+  } catch {}
+}
+
+/** How long keys unlocked with KleyKnox stay unlocked, in seconds (last choice is kept). */
+export const kleyknoxTtls = [
+  { seconds: 15 * 60, label: "15 minutes" },
+  { seconds: 60 * 60, label: "1 hour" },
+  { seconds: 2 * 3600, label: "2 hours" },
+  { seconds: 8 * 3600, label: "8 hours" },
+];
+
+export function kleyknoxTtl(): number {
+  try {
+    const v = Number(localStorage.getItem("kleyknoxTtl"));
+    if (kleyknoxTtls.some((t) => t.seconds === v)) return v;
+  } catch {}
+  return 2 * 3600;
+}
+
+export function setKleyKnoxTtl(seconds: number) {
+  try {
+    localStorage.setItem("kleyknoxTtl", String(seconds));
+  } catch {}
 }

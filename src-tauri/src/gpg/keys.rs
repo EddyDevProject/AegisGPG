@@ -172,14 +172,25 @@ pub fn export(cert: &Cert, secret: bool, passphrase: Option<&str>) -> Result<Vec
                 .filter(|p| !p.is_empty())
                 .map(|p| Password::from(p))
                 .ok_or(GpgError::PassphraseRequired)?;
-            ka.key()
-                .clone()
-                .decrypt_secret(&pw)
-                .map_err(|_| GpgError::WrongPassphrase)?;
+            super::gnupg_compat::decrypt_secret(ka.key().clone(), &pw)?;
             break;
         }
     }
     Ok(cert.as_tsk().armored().to_vec()?)
+}
+
+/// Checks that `passphrase` unlocks every protected secret key in the cert.
+pub fn check_passphrase(cert: &Cert, passphrase: &str) -> Result<()> {
+    if !cert.is_tsk() {
+        return Err(GpgError::NoSigningKey);
+    }
+    let pw = Password::from(passphrase);
+    for ka in cert.keys().secret() {
+        if ka.key().secret().is_encrypted() {
+            super::gnupg_compat::decrypt_secret(ka.key().clone(), &pw)?;
+        }
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]

@@ -2,7 +2,8 @@
 //!
 //! Keyed by the certificate's fingerprint. Entries are wiped on drop and
 //! expire `ttl` after they were typed (a later use does not extend them).
-//! A TTL of zero turns caching off.
+//! A TTL of zero turns caching off for typed passphrases; entries stored with
+//! their own lifetime (unlocked through kleyknox) keep it.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -13,6 +14,14 @@ use zeroize::Zeroizing;
 struct Entry {
     passphrase: Zeroizing<String>,
     stored_at: Instant,
+    /// Overrides the cache-wide TTL for this entry.
+    ttl: Option<Duration>,
+}
+
+impl Entry {
+    fn alive(&self, default_ttl: Duration) -> bool {
+        self.stored_at.elapsed() < self.ttl.unwrap_or(default_ttl)
+    }
 }
 
 struct Inner {
@@ -48,11 +57,21 @@ impl PassphraseCache {
         if inner.ttl.is_zero() {
             return;
         }
-        let ttl = inner.ttl;
-        inner.entries.retain(|_, e| e.stored_at.elapsed() < ttl);
+        self.insert(&mut inner, fingerprint, passphrase, None);
+    }
+
+    /// Stores a passphrase for `ttl`, whatever the cache-wide setting.
+    pub fn store_for(&self, fingerprint: &str, passphrase: &str, ttl: Duration) {
+        let mut inner = self.lock();
+        self.insert(&mut inner, fingerprint, passphrase, Some(ttl));
+    }
+
+    fn insert(&self, inner: &mut Inner, fingerprint: &str, passphrase: &str, ttl: Option<Duration>) {
+        let default_ttl = inner.ttl;
+        inner.entries.retain(|_, e| e.alive(default_ttl));
         inner.entries.insert(
             fingerprint.to_uppercase(),
-            Entry { passphrase: Zeroizing::new(passphrase.to_string()), stored_at: Instant::now() },
+            Entry { passphrase: Zeroizing::new(passphrase.to_string()), stored_at: Instant::now(), ttl },
         );
     }
 
@@ -61,7 +80,7 @@ impl PassphraseCache {
         inner
             .entries
             .get(&fingerprint.to_uppercase())
-            .filter(|e| e.stored_at.elapsed() < inner.ttl)
+            .filter(|e| e.alive(inner.ttl))
             .map(|e| e.passphrase.clone())
     }
 
@@ -71,7 +90,7 @@ impl PassphraseCache {
         inner
             .entries
             .iter()
-            .filter(|(_, e)| e.stored_at.elapsed() < inner.ttl)
+            .filter(|(_, e)| e.alive(inner.ttl))
             .map(|(fp, e)| (fp.clone(), e.passphrase.clone()))
             .collect()
     }
@@ -103,6 +122,19 @@ mod tests {
         std::thread::sleep(Duration::from_millis(1100));
         assert!(short.get("k").is_none());
         assert!(short.snapshot().is_empty());
+    }
+
+    #[test]
+    fn own_ttl_survives_disabled_cache() {
+        let c = PassphraseCache::new(60);
+        c.set_ttl(0);
+        c.store_for("k", "pw", Duration::from_secs(60));
+        assert_eq!(c.get("k").as_deref().map(String::as_str), Some("pw"));
+        c.store_for("short", "pw", Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(80));
+        assert!(c.get("short").is_none());
+        c.clear();
+        assert!(c.get("k").is_none());
     }
 
     #[test]
