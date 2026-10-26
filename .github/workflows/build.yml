@@ -22,7 +22,7 @@ jobs:
       release: ${{ steps.m.outputs.release }}
       tag: ${{ steps.m.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - id: m
         run: |
           version=$(jq -r .version src-tauri/tauri.conf.json)
@@ -61,7 +61,7 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -69,16 +69,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
+          toolchain: stable
           targets: ${{ matrix.rust-targets }}
 
-      - uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: src-tauri -> target
           key: ${{ matrix.name }}
@@ -101,7 +102,7 @@ jobs:
       # (shown in the repo sidebar). The tag is created if it does not exist.
       - name: Build and publish release
         if: needs.meta.outputs.release == 'true'
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Signs the update packages; required because the release config
@@ -121,13 +122,13 @@ jobs:
       # Otherwise: build only, upload installers as workflow artifacts.
       - name: Build
         if: needs.meta.outputs.release != 'true'
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         with:
           args: ${{ matrix.args }}
 
       - name: Upload installers
         if: needs.meta.outputs.release != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: aegisgpg-${{ matrix.os }}-${{ matrix.rust-targets || 'default' }}
           path: |
