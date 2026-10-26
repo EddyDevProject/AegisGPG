@@ -36,7 +36,7 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - Delete with confirmation
 - **Backup & restore**: the whole keyring (secret keys included) in one file encrypted with a passphrase you choose, and a restore that merges it back
 - **Revocation certificates**: save one for each of your keys while you still can, or revoke a key right away
-- **Unlock with KleyKnox**: plug in a USB stick holding a KleyKnox vault and one master passphrase unlocks every key on it, for 15 minutes up to 8 hours. Keys your keyring lacks are imported from the vault, and a passphrase that does not open your copy of a key is reported. Use the sidebar button, or let the passphrase prompt offer it first whenever the stick is plugged in (switchable in Keys). Nothing is written to disk
+- **Unlock with [KleyKnox](https://github.com/Nidhil-stack/kleyknox)**: plug in a USB stick holding a KleyKnox vault and one master passphrase unlocks every key on it, for 15 minutes up to 8 hours. Keys your keyring lacks are imported from the vault, and a passphrase that does not open your copy of a key is reported. Use the sidebar button, or let the passphrase prompt offer it first whenever the stick is plugged in (switchable in Keys). Nothing is written to disk
 
 ### Encrypt, sign, decrypt
 - Drag & drop any file; encrypt to one or many recipients and/or sign with your key
