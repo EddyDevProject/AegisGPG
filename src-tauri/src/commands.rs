@@ -856,9 +856,11 @@ pub fn clear_passphrase_cache(cache: State<'_, PassphraseCache>) {
 // ------------------------------------------------------------ kleyknox ----
 
 /// Whether a kleyknox vault is mounted, and which GPG keys it holds.
+/// Scanning mounted volumes can stall on an unreachable network drive, so it
+/// runs off the main thread (a plain `fn` command would run on it).
 #[tauri::command]
-pub fn kleyknox_status() -> kleyknox::Status {
-    kleyknox::status()
+pub async fn kleyknox_status() -> Result<kleyknox::Status> {
+    spawn_blocking(kleyknox::status).await.map_err(join_err)
 }
 
 #[derive(Serialize)]
@@ -884,11 +886,13 @@ pub async fn kleyknox_unlock(
     if pass.is_empty() {
         return Err(GpgError::PassphraseRequired);
     }
-    let dir = kleyknox::locate()
-        .ok_or_else(|| GpgError::NotFound("a kleyknox vault on a mounted drive".into()))?;
-    let entries = spawn_blocking(move || kleyknox::open_all(&dir, &pass))
-        .await
-        .map_err(join_err)??;
+    let entries = spawn_blocking(move || {
+        let dir = kleyknox::locate()
+            .ok_or_else(|| GpgError::NotFound("a kleyknox vault on a mounted drive".into()))?;
+        kleyknox::open_all(&dir, &pass)
+    })
+    .await
+    .map_err(join_err)??;
     let ttl = Duration::from_secs(ttl_seconds.clamp(60, 24 * 3600));
 
     let mut report = KleyKnoxReport { unlocked: Vec::new(), imported: Vec::new(), mismatched: Vec::new() };
