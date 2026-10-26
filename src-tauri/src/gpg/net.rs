@@ -3,7 +3,9 @@
 //! and bounded by connect/total timeouts so the UI never hangs.
 //!
 //! Everything downloaded is untrusted: secret key material is stripped and
-//! callers must check that the key matches what was asked for.
+//! callers must check that the key matches what was asked for. A WKD domain
+//! comes from whoever owns the address, so requests (and redirects) are limited
+//! to HTTPS and to named hosts, never IP literals such as localhost.
 
 use std::time::Duration;
 
@@ -18,6 +20,7 @@ use sha1::{Digest, Sha1};
 use super::{keys, GpgError, Result};
 
 const MAX_BYTES: usize = 5 * 1024 * 1024;
+const MAX_REDIRECTS: usize = 3;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -39,7 +42,7 @@ fn client() -> Result<Client> {
     Client::builder()
         .connect_timeout(Duration::from_secs(6))
         .timeout(Duration::from_secs(15))
-        .redirect(reqwest::redirect::Policy::limited(3))
+        .redirect(redirect_policy())
         .user_agent(concat!("AegisGPG/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|e| GpgError::Network(e.to_string()))
@@ -55,17 +58,38 @@ fn net_err(e: reqwest::Error) -> GpgError {
     })
 }
 
-fn require_https(url: &Url) -> Result<()> {
-    if url.scheme() == "https" {
-        Ok(())
-    } else {
-        Err(GpgError::InvalidInput("Only HTTPS endpoints are allowed".into()))
+/// HTTPS to a named host. IP literals (127.0.0.1, 192.168.x.x, [::1], and the
+/// odd spellings `url` normalizes to them) would aim the request at the local
+/// machine or network instead of a public server.
+fn check_endpoint(url: &Url) -> Result<()> {
+    if url.scheme() != "https" {
+        return Err(GpgError::InvalidInput("Only HTTPS endpoints are allowed".into()));
     }
+    // `domain()` is `None` for IP hosts.
+    if url.domain().is_none() {
+        return Err(GpgError::InvalidInput("Only named hosts are allowed".into()));
+    }
+    Ok(())
+}
+
+/// Follows a few redirects, each held to the same rules as the first request:
+/// a server may not bounce us to plain HTTP or to an address on this network.
+/// A refused redirect surfaces as the 3xx answer, i.e. an ordinary failure.
+fn redirect_policy() -> reqwest::redirect::Policy {
+    reqwest::redirect::Policy::custom(|attempt| {
+        if attempt.previous().len() >= MAX_REDIRECTS {
+            return attempt.error("too many redirects");
+        }
+        if check_endpoint(attempt.url()).is_err() {
+            return attempt.stop();
+        }
+        attempt.follow()
+    })
 }
 
 /// GET returning `None` on 404. The body is capped at `MAX_BYTES`.
 async fn get(url: Url) -> Result<Option<Vec<u8>>> {
-    require_https(&url)?;
+    check_endpoint(&url)?;
     let mut resp = client()?.get(url).send().await.map_err(net_err)?;
     match resp.status() {
         StatusCode::NOT_FOUND => return Ok(None),
@@ -127,6 +151,7 @@ fn wkd_urls(email: &str) -> Result<Vec<Url>> {
     let build = |s: String| -> Result<Url> {
         let mut u = Url::parse(&s).map_err(|_| GpgError::InvalidInput("Invalid email address".into()))?;
         u.query_pairs_mut().append_pair("l", local);
+        check_endpoint(&u)?;
         Ok(u)
     };
     Ok(vec![
@@ -379,5 +404,53 @@ mod tests {
         assert!(urls[1].as_str().starts_with("https://example.org/.well-known/openpgpkey/hu/"));
         assert!(wkd_urls("not-an-email").is_err());
         assert!(wkd_urls("a@b/evil.com").is_err());
+    }
+
+    #[test]
+    fn wkd_refuses_ip_literals() {
+        for email in ["a@127.0.0.1", "a@192.168.1.1", "a@0x7f.0.0.1", "a@2130706433"] {
+            assert!(wkd_urls(email).is_err(), "{email}");
+        }
+        assert!(wkd_urls("a@example.org").is_ok());
+        assert!(check_endpoint(&Url::parse("http://example.org/").unwrap()).is_err());
+        assert!(check_endpoint(&Url::parse("https://[::1]/").unwrap()).is_err());
+        assert!(check_endpoint(&Url::parse("https://127.0.0.1/").unwrap()).is_err());
+        assert!(check_endpoint(&Url::parse("https://example.org/x").unwrap()).is_ok());
+    }
+
+    /// A server that redirects to plain HTTP on this machine must not be followed.
+    #[test]
+    fn redirect_to_a_local_http_address_is_not_followed() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::Arc;
+
+        let target = TcpListener::bind("127.0.0.1:0").unwrap();
+        target.set_nonblocking(true).unwrap();
+        let target_port = target.local_addr().unwrap().port();
+        let redirector = TcpListener::bind("127.0.0.1:0").unwrap();
+        let redirector_port = redirector.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            if let Ok((mut c, _)) = redirector.accept() {
+                let mut buf = [0u8; 1024];
+                let _ = c.read(&mut buf);
+                let _ = write!(
+                    c,
+                    "HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:{target_port}/secret\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                );
+            }
+        });
+
+        // Bypasses `get` (which would refuse the IP literal itself) to test the policy alone.
+        let resp = tauri::async_runtime::block_on(async {
+            client().unwrap().get(format!("http://127.0.0.1:{redirector_port}/")).send().await.unwrap()
+        });
+        assert_eq!(resp.status(), StatusCode::FOUND, "the redirect was followed");
+        let hit = Arc::new(AtomicBool::new(false));
+        if target.accept().is_ok() {
+            hit.store(true, Ordering::SeqCst);
+        }
+        assert!(!hit.load(Ordering::SeqCst), "the redirect target was contacted");
     }
 }
