@@ -31,10 +31,12 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 ### Keys
 - Generate **Ed25519/Cv25519** (default) or **RSA 4096** keys, with optional passphrase and expiry
 - Import from `.asc` / `.pub` / `.key` files, drag & drop, or pasted ASCII armor
+- **Keys exported by GnuPG 2.4** work too: its protected secret keys use an encoding Sequoia rejects, so AegisGPG re-reads them in canonical form, and GnuPG's default ZLIB-compressed messages decrypt as well
 - Export public keys, or secret keys behind a passphrase prompt, to the clipboard or a file
 - Delete with confirmation
 - **Backup & restore**: the whole keyring (secret keys included) in one file encrypted with a passphrase you choose, and a restore that merges it back
 - **Revocation certificates**: save one for each of your keys while you still can, or revoke a key right away
+- **Unlock with KleyKnox**: plug in a USB stick holding a KleyKnox vault and one master passphrase unlocks every key on it, for 15 minutes up to 8 hours. Keys your keyring lacks are imported from the vault, and a passphrase that does not open your copy of a key is reported. Use the sidebar button, or let the passphrase prompt offer it first whenever the stick is plugged in (switchable in Keys). Nothing is written to disk
 
 ### Encrypt, sign, decrypt
 - Drag & drop any file; encrypt to one or many recipients and/or sign with your key
@@ -62,6 +64,7 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - **Secrets in memory** (passphrases, decrypted key material) are held in zeroizing buffers and wiped on drop
 - **Least privilege**: the webview gets *no* filesystem access. The Rust side opens only files you picked in a dialog or dropped on the window. The Tauri capability list contains just the dialog permissions, and a strict CSP is set
 - **Untrusted downloads**: anything fetched from a keyserver/WKD is stripped of secret material, size-capped (5 MB), HTTPS-only, bound to timeouts, and checked against what you asked for
+- **KleyKnox vault**: read-only (age, scrypt passphrase), decrypted off the UI thread, with the scrypt cost capped. The passphrases it releases live only in memory, for the time you chose, and the wipe below clears them
 - **Wipe & quit**: the sidebar button (or Ctrl/Cmd+Shift+X) forgets remembered passphrases, empties the clipboard and exits. Copied decrypted text and secret keys are also cleared from the clipboard after 30 seconds
 - **Supply chain**: `cargo-deny` and `npm audit` run on dependency changes and weekly in CI (see [`audit.yml`](.github/workflows/audit.yml) and [`deny.toml`](src-tauri/deny.toml)). Security reports: see [SECURITY.md](SECURITY.md)
 - **Typed errors** end to end: Rust enum → `{ code, message }` → friendly UI message
