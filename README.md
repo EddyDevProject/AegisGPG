@@ -45,7 +45,7 @@ The cryptography runs in Rust on [Sequoia-PGP](https://sequoia-pgp.org) with a p
 - Quick text tool to encrypt/decrypt clipboard text without touching the disk, plus **cleartext signing and verification** (readable message with a signature below it)
 
 ### Contacts & Web of Trust
-- Contact book with avatars (Libravatar → Gravatar → generated initials; can be switched off)
+- Contact book with avatars (generated initials; optional Libravatar → Gravatar lookup, off by default because it sends a hash of each email to third parties)
 - Contact details: fingerprint in groups of four, key IDs, ownertrust selector, user IDs, subkeys with purposes and expiry
 - **Trust graph**: an interactive, zoomable map of who certified whom, coloured by validity (green: full, yellow: marginal, grey: unknown). Signatures are cryptographically verified, not just read
 - **Certify a key** with a guided dialog: verification level, user IDs, passphrase, and export of the countersigned key

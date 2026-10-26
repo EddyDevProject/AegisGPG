@@ -43,7 +43,7 @@
 <div class="mb-4 flex items-center justify-between">
   <h2 class="flex items-center gap-2 text-lg font-semibold">Keys <InfoTip text="Your keyring: the keys stored in AegisGPG. Keys you own can decrypt and sign; other people's keys let you encrypt for them and verify their signatures." /></h2>
   <div class="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
-    <label class="flex items-center gap-1.5 text-xs text-zinc-500" title="Sends a hash of each contact's email address to libravatar.org / gravatar.com">
+    <label class="flex items-center gap-1.5 text-xs text-zinc-500" title="Off by default. When on, a hash of every contact's email address is sent to libravatar.org / gravatar.com, which reveals who is in your keyring.">
       <input type="checkbox" checked={prefs.avatars} onchange={(e) => setAvatars(e.currentTarget.checked)} />
       Online avatars
     </label>
