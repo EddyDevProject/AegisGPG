@@ -193,9 +193,12 @@ function pref(key: string, fallback: boolean): boolean {
     return fallback;
   }
 }
-/** Avatars are fetched from third parties using a hash of the email. */
+/**
+ * Avatars are fetched from third parties using a hash of the email, which
+ * reveals the contact list: off until the user turns it on.
+ */
 export const prefs = $state({
-  avatars: pref("avatars", true),
+  avatars: pref("avatars", false),
   encryptToSelf: pref("encryptToSelf", true),
   rememberPassphrase: pref("rememberPassphrase", true),
   clearClipboard: pref("clearClipboard", true),
