@@ -13,7 +13,7 @@
   import TextView from "./lib/views/TextView.svelte";
   import { onMount } from "svelte";
   import { api } from "./lib/api";
-  import { applyTheme, checkForUpdates, installUpdate, theme, toggleTheme, updater } from "./lib/stores.svelte";
+  import { applyTheme, checkForUpdates, installUpdate, refreshKleyKnox, kleyknox, theme, toggleTheme, unlockWithKleyKnox, updater } from "./lib/stores.svelte";
 
   type Tab = "keys" | "teams" | "discover" | "graph" | "encrypt" | "decrypt" | "text";
 
@@ -44,10 +44,12 @@
   // Silent check at startup (not in `tauri dev`, where there is nothing to update).
   onMount(() => {
     if (!import.meta.env.DEV) checkForUpdates();
+    void refreshKleyKnox();
   });
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<!-- The stick may be plugged in while the app is open: look again when it regains focus. -->
+<svelte:window onkeydown={onKeydown} onfocus={() => void refreshKleyKnox()} />
 
 <div class="flex h-full">
   <nav class="flex w-56 shrink-0 flex-col gap-1 border-r border-zinc-200 p-3 dark:border-zinc-800" aria-label="Main">
@@ -79,8 +81,17 @@
         {/if}
       </div>
     {/if}
+    {#if kleyknox.dir}
+      <button
+        class="{updater.status === 'idle' || updater.status === 'checking' ? 'mt-auto ' : ''}flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+        title="Unlocks every key on the KleyKnox stick with its passphrase"
+        onclick={() => void unlockWithKleyKnox()}
+      >
+        <Icon name="unlock" class="size-[18px] text-knox-ink dark:text-knox" />Unlock with KleyKnox
+      </button>
+    {/if}
     <button
-      class="{updater.status === 'idle' || updater.status === 'checking' ? 'mt-auto ' : ''}flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900"
+      class="{!kleyknox.dir && (updater.status === 'idle' || updater.status === 'checking') ? 'mt-auto ' : ''}flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900"
       disabled={updater.status !== "idle"}
       onclick={() => checkForUpdates(true)}
     >

@@ -45,7 +45,7 @@ pub fn revoke(cert: &Cert, reason: Reason, message: &str, passphrase: Option<&st
             .filter(|p| !p.is_empty())
             .map(Password::from)
             .ok_or(GpgError::PassphraseRequired)?;
-        primary.decrypt_secret(&pw).map_err(|_| GpgError::WrongPassphrase)?
+        super::gnupg_compat::decrypt_secret(primary, &pw)?
     } else {
         primary
     };

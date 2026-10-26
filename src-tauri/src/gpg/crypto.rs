@@ -135,7 +135,7 @@ fn signing_keypair(
             .filter(|p| !p.is_empty())
             .map(Password::from)
             .ok_or(GpgError::PassphraseRequired)?;
-        key = key.decrypt_secret(&pw).map_err(|_| GpgError::WrongPassphrase)?;
+        key = super::gnupg_compat::decrypt_secret(key, &pw)?;
     }
     Ok(key.into_keypair()?)
 }
@@ -247,7 +247,7 @@ impl DecryptionHelper for Helper {
                                 continue;
                             }
                         };
-                        match key.decrypt_secret(&Password::from(pw.as_str())) {
+                        match super::gnupg_compat::decrypt_secret(key.clone(), &Password::from(pw.as_str())) {
                             Ok(k) => key = k,
                             Err(_) => {
                                 // A stale cached passphrase is just "ask again".

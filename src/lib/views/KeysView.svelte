@@ -10,7 +10,7 @@
   import ExportKeyModal from "../components/ExportKeyModal.svelte";
   import RevokeModal from "../components/RevokeModal.svelte";
   import BackupModal from "../components/BackupModal.svelte";
-  import { askConfirm, errorMessage, fmtDate, keyLabel, keyring, prefs, refreshKeys, setAvatars, setClearClipboard, setRememberPassphrase, shortFp, toast, ui } from "../stores.svelte";
+  import { askConfirm, errorMessage, fmtDate, keyLabel, keyring, prefs, refreshKeys, setAvatars, setClearClipboard, setRememberPassphrase, setKleyKnoxByDefault, shortFp, kleyknox, toast, ui } from "../stores.svelte";
   import { btn, card } from "../ui";
   import type { KeyInfo } from "../types";
 
@@ -55,6 +55,12 @@
       <input type="checkbox" checked={prefs.clearClipboard} onchange={(e) => setClearClipboard(e.currentTarget.checked)} />
       Clear clipboard (30 s)
     </label>
+    {#if kleyknox.dir}
+      <label class="flex items-center gap-1.5 text-xs text-zinc-500" title="When a key needs its passphrase and the KleyKnox stick is plugged in, ask for the KleyKnox passphrase first.">
+        <input type="checkbox" checked={prefs.kleyknoxByDefault} onchange={(e) => setKleyKnoxByDefault(e.currentTarget.checked)} />
+        Use KleyKnox when plugged in
+      </label>
+    {/if}
     <button class={btn.outline} onclick={() => (modal = "backup")}>Backup</button>
     <button class={btn.outline} onclick={() => (modal = "import")}>Import</button>
     <button class={btn.primary} onclick={() => (modal = "generate")}>Generate key</button>
