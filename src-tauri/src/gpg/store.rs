@@ -121,7 +121,10 @@ impl KeyStore {
 
         // Plain file: passphrase-protected secret, public-only, or no vault.
         write_private(&path, &cert.as_tsk().armored().to_vec()?)?;
-        if marker.exists() {
+        // The vault entry may go only once the secret is safely in the file. A
+        // public-only `cert` can just mean the vault was unreadable a moment
+        // ago (`read_cert`): deleting then would destroy the only copy.
+        if marker.exists() && cert.is_tsk() {
             fs::remove_file(&marker)?;
             self.vault.delete(&fp);
         }
@@ -329,6 +332,50 @@ mod vault_tests {
         assert!(a.get(&plain.fingerprint().to_hex()).unwrap().is_tsk());
         fs::remove_dir_all(dir_a).unwrap();
         fs::remove_dir_all(dir_b).unwrap();
+    }
+
+    /// Holds its secrets but can refuse to hand them out, like a locked keychain.
+    #[derive(Default, Clone)]
+    struct FlakyVault {
+        inner: MemVault,
+        locked: Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    impl SecretVault for FlakyVault {
+        fn set(&self, fp: &str, s: &[u8]) -> std::result::Result<(), String> {
+            self.inner.set(fp, s)
+        }
+        fn get(&self, fp: &str) -> std::result::Result<Zeroizing<Vec<u8>>, String> {
+            if self.locked.load(std::sync::atomic::Ordering::SeqCst) {
+                return Err("locked".into());
+            }
+            self.inner.get(fp)
+        }
+        fn delete(&self, fp: &str) {
+            self.inner.delete(fp)
+        }
+    }
+
+    #[test]
+    fn locked_vault_does_not_lose_the_secret() {
+        use std::sync::atomic::Ordering::SeqCst;
+        let dir = tmp("locked");
+        let vault = FlakyVault::default();
+        let store = KeyStore::open_with(dir.clone(), Box::new(vault.clone())).unwrap();
+        let (cert, _) = CertBuilder::general_purpose(Some("a@b.c")).generate().unwrap();
+        let fp = cert.fingerprint().to_hex();
+        store.put(cert.clone()).unwrap();
+
+        // Keychain locked: the key reads as public-only, and a refresh from a
+        // keyserver (public data) is merged into it.
+        vault.locked.store(true, SeqCst);
+        assert!(!store.get(&fp).unwrap().is_tsk());
+        store.put(cert.strip_secret_key_material()).unwrap();
+
+        vault.locked.store(false, SeqCst);
+        assert!(dir.join(format!("{fp}.vault")).exists(), "marker must survive");
+        assert!(store.get(&fp).unwrap().is_tsk(), "secret must still be in the vault");
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
