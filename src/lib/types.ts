@@ -1,5 +1,11 @@
 export type Trust = "unknown" | "none" | "marginal" | "full" | "ultimate";
 
+/** One user ID with the validity of its own certifications. */
+export interface Identity {
+  user_id: string;
+  validity: Trust;
+}
+
 export interface KeyInfo {
   fingerprint: string;
   key_id: string;
@@ -7,9 +13,11 @@ export interface KeyInfo {
   comment: string | null;
   email: string | null;
   ownertrust: Trust;
-  /** Computed validity through the web of trust */
+  /** Validity of the identity shown as name/email: the best-validated user ID */
   validity: Trust;
   user_ids: string[];
+  /** Every user ID with its own validity: a certification covers only the one it signed */
+  identities: Identity[];
   algorithm: string;
   /** Unix seconds */
   created: number;
