@@ -102,7 +102,7 @@ jobs:
       # (shown in the repo sidebar). The tag is created if it does not exist.
       - name: Build and publish release
         if: needs.meta.outputs.release == 'true'
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Signs the update packages; required because the release config
@@ -122,7 +122,7 @@ jobs:
       # Otherwise: build only, upload installers as workflow artifacts.
       - name: Build
         if: needs.meta.outputs.release != 'true'
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         with:
           args: ${{ matrix.args }}
 
