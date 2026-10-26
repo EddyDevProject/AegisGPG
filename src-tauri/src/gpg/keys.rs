@@ -1,5 +1,6 @@
 //! Key generation, inspection, import and export.
 
+use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use openpgp::cert::prelude::*;
@@ -31,6 +32,14 @@ pub struct GenerateKeyRequest {
     pub validity_days: Option<u64>,
 }
 
+/// One user ID of a key with its own validity: a certification covers only
+/// the user ID it signed.
+#[derive(Serialize)]
+pub struct Identity {
+    pub user_id: String,
+    pub validity: Trust,
+}
+
 #[derive(Serialize)]
 pub struct KeyInfo {
     pub fingerprint: String,
@@ -39,8 +48,10 @@ pub struct KeyInfo {
     pub comment: Option<String>,
     pub email: Option<String>,
     pub ownertrust: Trust,
+    /// Validity of the identity shown as `name`/`email`: the best-validated user ID.
     pub validity: Trust,
     pub user_ids: Vec<String>,
+    pub identities: Vec<Identity>,
     pub algorithm: String,
     pub created: u64,
     pub expires: Option<u64>,
@@ -99,15 +110,30 @@ pub fn generate(req: GenerateKeyRequest) -> Result<Cert> {
     Ok(cert)
 }
 
-pub fn info(cert: &Cert, ownertrust: Trust, validity: Trust) -> KeyInfo {
+/// `uid_validity` maps each user ID to its validity through the web of trust.
+/// The key is presented under its best-validated user ID (the first one on a
+/// tie), so a user ID added without anyone's certification is never the name
+/// shown next to a validity it did not earn.
+pub fn info(cert: &Cert, ownertrust: Trust, uid_validity: &HashMap<String, Trust>) -> KeyInfo {
     let policy = StandardPolicy::new();
     let primary = cert.primary_key().key();
 
-    let user_ids: Vec<String> = cert
+    let identities: Vec<Identity> = cert
         .userids()
-        .map(|u| String::from_utf8_lossy(u.userid().value()).into_owned())
+        .map(|u| {
+            let user_id = super::wot::userid_text(u.userid().value());
+            Identity { validity: uid_validity.get(&user_id).copied().unwrap_or_default(), user_id }
+        })
         .collect();
-    let first = cert.userids().next();
+    let user_ids = identities.iter().map(|i| i.user_id.clone()).collect();
+    let mut best = 0;
+    for (i, id) in identities.iter().enumerate() {
+        if id.validity.rank() > identities[best].validity.rank() {
+            best = i;
+        }
+    }
+    let validity = identities.get(best).map(|i| i.validity).unwrap_or_default();
+    let first = cert.userids().nth(best);
     let name = first.as_ref().and_then(|u| u.userid().name().ok().flatten().map(|s| s.to_string()));
     let comment = first.as_ref().and_then(|u| u.userid().comment().ok().flatten().map(|s| s.to_string()));
     let email = first.as_ref().and_then(|u| u.userid().email().ok().flatten().map(|s| s.to_string()));
@@ -136,6 +162,7 @@ pub fn info(cert: &Cert, ownertrust: Trust, validity: Trust) -> KeyInfo {
         ownertrust,
         validity,
         user_ids,
+        identities,
         algorithm: primary.pk_algo().to_string(),
         created: unix(primary.creation_time()),
         expires,
@@ -143,6 +170,11 @@ pub fn info(cert: &Cert, ownertrust: Trust, validity: Trust) -> KeyInfo {
         secret_encrypted,
         revoked,
     }
+}
+
+/// `info` for a key nobody has vouched for here (search results, refresh checks).
+pub fn info_unvalidated(cert: &Cert) -> KeyInfo {
+    info(cert, Trust::Unknown, &HashMap::new())
 }
 
 /// Parse one or more certificates from armored or binary data.

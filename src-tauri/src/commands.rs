@@ -1,5 +1,6 @@
 //! Tauri IPC surface. Heavy work runs on blocking threads so the UI stays live.
 
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, BufReader, BufWriter, Cursor, Read};
 use std::path::{Path, PathBuf};
@@ -75,12 +76,13 @@ fn describe_all(store: &KeyStore) -> Result<Vec<KeyInfo>> {
     let certs = store.all()?;
     let owner = store.ownertrust_map(&certs);
     let edges = wot::certifications(&certs);
-    let valid = wot::validity(&certs, &owner, &edges);
+    let levels = wot::levels(&certs, &owner, &edges);
+    let none = HashMap::new();
     Ok(certs
         .iter()
         .map(|c| {
             let fp = c.fingerprint().to_hex();
-            keys::info(c, owner[&fp], valid.get(&fp).copied().unwrap_or_default())
+            keys::info(c, owner[&fp], levels.uid.get(&fp).unwrap_or(&none))
         })
         .collect())
 }
@@ -667,7 +669,7 @@ fn remote_keys(store: &KeyStore, certs: Vec<sequoia_openpgp::Cert>) -> Result<Ve
                 .map_err(|_| GpgError::Other("Could not armor the key".into()))?;
             Ok(RemoteKey {
                 already_have: store.get(&c.fingerprint().to_hex()).is_ok(),
-                info: keys::info(&c, Trust::Unknown, Trust::Unknown),
+                info: keys::info_unvalidated(&c),
                 armored,
             })
         })
@@ -744,13 +746,13 @@ pub async fn refresh_keys(store: State<'_, KeyStore>, server: Server) -> Result<
             continue;
         };
 
-        let was_revoked = keys::info(&before, Trust::Unknown, Trust::Unknown).revoked;
+        let was_revoked = keys::info_unvalidated(&before).revoked;
         let after = store.put(remote)?;
         if after == before {
             report.unchanged += 1;
             continue;
         }
-        let info = keys::info(&after, Trust::Unknown, Trust::Unknown);
+        let info = keys::info_unvalidated(&after);
         report.changes.push(RefreshChange {
             label: info.name.clone().or(info.email.clone()).unwrap_or_else(|| fp.clone()),
             change: if info.revoked && !was_revoked { "revoked" } else { "updated" },

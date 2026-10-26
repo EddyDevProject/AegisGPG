@@ -101,7 +101,7 @@
 
       <section>
         <div class={label}>User IDs</div>
-        <ul class="space-y-0.5">{#each k.user_ids as u}<li class="break-words">{u}</li>{/each}</ul>
+        <ul class="space-y-1">{#each k.identities as u}<li class="flex flex-wrap items-center gap-2 break-words"><span>{u.user_id}</span>{#if !k.has_secret}<TrustBadge level={u.validity} />{/if}</li>{/each}</ul>
       </section>
 
       <section>
