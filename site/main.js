@@ -182,17 +182,18 @@ sealBtn.addEventListener("keydown", (e) => {
 });
 
 // ---- copy command
-const copyBtn = $("#copy");
-copyBtn?.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText($("#cmd-text").textContent);
-    copyBtn.classList.add("done");
-    copyBtn.setAttribute("aria-label", "Copied");
-    setTimeout(() => {
-      copyBtn.classList.remove("done");
-      copyBtn.setAttribute("aria-label", "Copy command");
-    }, 1600);
-  } catch {}
+document.querySelectorAll(".cmd .copy").forEach((copyBtn) => {
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(copyBtn.closest(".cmd").querySelector("code").textContent);
+      copyBtn.classList.add("done");
+      copyBtn.setAttribute("aria-label", "Copied");
+      setTimeout(() => {
+        copyBtn.classList.remove("done");
+        copyBtn.setAttribute("aria-label", "Copy command");
+      }, 1600);
+    } catch {}
+  });
 });
 
 // ---- downloads: OS-aware, links from the latest GitHub release
