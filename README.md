@@ -82,6 +82,12 @@ Installers for all platforms are built by GitHub Actions and attached to each [R
 | Windows (x64) | NSIS `-setup.exe` |
 | Linux | `.deb`, `.rpm`, `.AppImage` (from Releases) |
 
+On macOS you can also install with [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask eddydevproject/tap/aegisgpg
+```
+
 Builds are currently **unsigned**: macOS Gatekeeper will say "unidentified developer" (right-click → Open) and Windows SmartScreen will warn (More info → Run anyway).
 
 Your keyring lives in the app data folder:

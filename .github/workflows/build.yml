@@ -33,6 +33,34 @@ jobs:
           echo "release=$release" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
+  # After a published release, bump the Homebrew cask in the tap repo.
+  # Needs a secret HOMEBREW_TAP_TOKEN (fine-grained PAT, contents:write on
+  # EddyDevProject/homebrew-tap).
+  homebrew:
+    needs: [meta, build]
+    if: needs.meta.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update cask
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          version="${TAG#v}"
+          base="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+          arm=$(curl -fsSL "$base/AegisGPG_${version}_aarch64.dmg" | sha256sum | cut -d' ' -f1)
+          intel=$(curl -fsSL "$base/AegisGPG_${version}_x64.dmg" | sha256sum | cut -d' ' -f1)
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/EddyDevProject/homebrew-tap.git" tap
+          cd tap
+          f=Casks/aegisgpg.rb
+          sed -i -E "s/^(  version )\".*\"/\1\"${version}\"/" "$f"
+          sed -i -E "s/^(  sha256 arm: +)\"[0-9a-f]+\"/\1\"${arm}\"/" "$f"
+          sed -i -E "s/^(         intel: )\"[0-9a-f]+\"/\1\"${intel}\"/" "$f"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "aegisgpg ${version}"
+          git push
+
   build:
     name: ${{ matrix.name }}
     needs: meta
