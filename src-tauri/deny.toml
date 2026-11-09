@@ -16,6 +16,10 @@ targets = [
 yanked = "deny"
 unmaintained = "workspace"
 ignore = [
+  # Sequoia 2.4.2 depends on elliptic-curve 0.13, which requires crypto-bigint
+  # 0.5.x. No compatible patched crypto-bigint release is available upstream;
+  # re-check when Sequoia updates its elliptic-curve dependencies.
+  { id = "RUSTSEC-2026-0387", reason = "no compatible patched release; revisit when Sequoia updates elliptic-curve" },
   # No patched `rsa` exists yet (it is pulled in by Sequoia's pure-Rust backend). Affects
   # timing of RSA private-key operations, i.e. RSA keys; Ed25519/Cv25519 (the default) are
   # not affected. Re-check when Sequoia or `rsa` ships a constant-time implementation.
