@@ -27,9 +27,7 @@ ignore = [
   # `zip` 4.x comes from tauri-plugin-updater, which only unpacks update archives that
   # passed minisign verification and were published by this project. Drop these once
   # the updater moves to zip >= 9.
-  { id = "RUSTSEC-2026-0367", reason = "updater only extracts signed archives from our releases" },
   { id = "RUSTSEC-2026-0368", reason = "updater only extracts signed archives from our releases" },
-  { id = "RUSTSEC-2026-0369", reason = "updater only extracts signed archives from our releases" },
 ]
 
 [licenses]
